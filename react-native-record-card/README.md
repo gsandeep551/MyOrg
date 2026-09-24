@@ -77,6 +77,31 @@ For a local, unsynced record, add `tone="warning"` and `status={{ label: 'Not Sy
 
 Icons can be any element, e.g. `icon: <Icon name="content-copy" size={20} color="#7A32E0" />` from `react-native-vector-icons`.
 
+### Sending queued tickets
+
+`SendQueueSheet` sends records saved on the device. Checkboxes let the user pick which ones to send (all ticked by default; with one ticket there's no checkbox). Items go one by one, and each row shows Sending, ✓ Sent, or a red error with its own Retry. The single yellow button always says what it does: *Send 3 tickets*, *Send 2 selected*, *Retry 1 failed*, then *Done*. Offline, it's disabled and a banner explains that tickets send when the connection is back. When everything is sent the header turns green and the sheet closes itself.
+
+```tsx
+<SendQueueSheet
+  visible={open}
+  onClose={() => setOpen(false)}
+  items={queue.map(t => ({
+    id: t.id,
+    title: `#${t.id} · ${t.type}`,
+    subtitle: `${t.customer} · ${t.well} · ${t.date}`,
+    amount: money(t.amount),
+  }))}
+  send={id => api.sendTicket(id)}          // resolve = sent, reject(new Error(msg)) = failed
+  online={isOnline}
+  total={money(queueTotal)}
+  onDone={({ sent }) => removeFromQueue(sent)}
+  renderIcon={(name, color, size) => <Icon name={ICONS[name]} color={color} size={size} />}
+  bottomInset={insets.bottom}
+/>
+```
+
+Props: `visible`, `onClose`, `items` (`{ id, title, subtitle?, amount? }`), `send`, `online?` (true), `title?` ('Send tickets'), `noun?` (`['ticket', 'tickets']`), `total?`, `onDone?`, `autoCloseMs?` (1400; 0 keeps it open), `renderIcon?` (names: `ticket`, `send`, `check`, `error`, `offline`, `close`, `done`), `bottomInset?`, `maxWidth?` (560), `theme?`.
+
 ### Using the sheet on its own
 
 ```tsx
