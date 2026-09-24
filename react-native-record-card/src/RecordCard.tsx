@@ -18,6 +18,11 @@ export interface RecordField {
   label: string;
   value: ReactNode;
   key?: string;
+  /**
+   * Give the field a full-width row below the grid. By default a text value
+   * too long to fit its column in `valueLines` lines is moved there automatically.
+   */
+  wide?: boolean;
 }
 
 export interface CardButton {
@@ -42,8 +47,13 @@ export interface RecordCardProps {
   amountTone?: Tone;
   /** `header` shows the amount beside the status instead of in the footer. */
   amountPlacement?: 'footer' | 'header';
-  /** `compact` tightens padding and type, fitting about 25% more cards per screen. */
+  /**
+   * `compact` (default) fits about 25% more cards per screen; `comfortable`
+   * has roomier padding and type.
+   */
   density?: 'comfortable' | 'compact';
+  /** Lines a field value may wrap to before it truncates. */
+  valueLines?: number;
   primaryAction?: CardButton;
   secondaryAction?: CardButton;
   /** Overflow menu. Shows a ⋮ button; long-pressing the card opens it too. */
@@ -80,7 +90,8 @@ export function RecordCard({
   amount,
   amountTone,
   amountPlacement = 'footer',
-  density = 'comfortable',
+  density = 'compact',
+  valueLines = 2,
   primaryAction,
   secondaryAction,
   actions,
@@ -105,13 +116,13 @@ export function RecordCard({
   const scale = useRef(new Animated.Value(1)).current;
 
   const hasMenu = !!actions?.length;
-  const cols = Math.max(
-    1,
-    Math.min(columns ?? autoColumns(width), fields.length || 1),
+  const compact = density === 'compact';
+  const rows = useMemo(
+    () => layoutFields(fields, columns ?? autoColumns(width), width, compact, valueLines),
+    [fields, columns, width, compact, valueLines],
   );
   const attention = tone ? theme.tones[tone] : undefined;
   const statusTone = theme.tones[status?.tone ?? 'info'];
-  const compact = density === 'compact';
   const amountInHeader = amountPlacement === 'header' && !!amount;
   const amountColor = amountTone ? theme.tones[amountTone].fg : theme.amount;
 
@@ -217,7 +228,11 @@ export function RecordCard({
           <View style={styles.titleWrap}>
             <Text
               numberOfLines={1}
-              style={[styles.title, { color: theme.text }]}
+              style={[
+                styles.title,
+                compact && styles.titleCompact,
+                { color: theme.text },
+              ]}
             >
               {title}
             </Text>
@@ -230,6 +245,8 @@ export function RecordCard({
               </Text>
             )}
           </View>
+          {/* Wraps below the title rather than truncating the ID or amount. */}
+          <View style={styles.headerEnd}>
           {status && (
             <View
               style={[styles.status, { backgroundColor: statusTone.soft }]}
@@ -253,58 +270,61 @@ export function RecordCard({
               {amount}
             </Text>
           )}
+          </View>
         </View>
 
         {/* ---------- fields ---------- */}
-        {fields.length > 0 && (
-          <View style={styles.grid}>
-            {fields.map((f, i) => {
-              const col = i % cols;
-              return (
-                <View
-                  key={f.key ?? f.label}
+        {rows.map((row, ri) => (
+          <View
+            key={ri}
+            style={[
+              styles.row,
+              ri > 0 && {
+                borderTopWidth: StyleSheet.hairlineWidth,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            {row.map((f, ci) => (
+              <View
+                key={f.key ?? f.label}
+                style={[
+                  styles.cell,
+                  compact && styles.cellCompact,
+                  ci > 0 && {
+                    borderLeftWidth: StyleSheet.hairlineWidth,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <Text
+                  numberOfLines={1}
                   style={[
-                    styles.cell,
-                    compact && styles.cellCompact,
-                    {
-                      // Grows so a short last row fills the card width.
-                      flexBasis: `${100 / cols}%`,
-                      borderColor: theme.border,
-                      borderLeftWidth: col === 0 ? 0 : StyleSheet.hairlineWidth,
-                      borderTopWidth: i < cols ? 0 : StyleSheet.hairlineWidth,
-                    },
+                    styles.fieldLabel,
+                    compact && styles.fieldLabelCompact,
+                    { color: theme.textFaint },
                   ]}
                 >
+                  {f.label.toUpperCase()}
+                </Text>
+                {typeof f.value === 'string' || typeof f.value === 'number' ? (
                   <Text
-                    numberOfLines={1}
+                    numberOfLines={valueLines}
                     style={[
-                      styles.fieldLabel,
-                      compact && styles.fieldLabelCompact,
-                      { color: theme.textFaint },
+                      styles.fieldValue,
+                      compact && styles.fieldValueCompact,
+                      { color: theme.text },
                     ]}
                   >
-                    {f.label.toUpperCase()}
+                    {f.value}
                   </Text>
-                  {typeof f.value === 'string' ||
-                  typeof f.value === 'number' ? (
-                    <Text
-                      numberOfLines={2}
-                      style={[
-                        styles.fieldValue,
-                        compact && styles.fieldValueCompact,
-                        { color: theme.text },
-                      ]}
-                    >
-                      {f.value}
-                    </Text>
-                  ) : (
-                    f.value
-                  )}
-                </View>
-              );
-            })}
+                ) : (
+                  f.value
+                )}
+              </View>
+            ))}
           </View>
-        )}
+        ))}
 
         {children}
 
@@ -395,6 +415,39 @@ export function RecordCard({
   );
 }
 
+const CELL_PADDING = { comfortable: 36, compact: 28 };
+
+/**
+ * Packs fields into rows of `cols`. A wide field, or a text value that would
+ * need more than `lines` lines in its column, gets its own full-width row
+ * after the grid so it can be read in full.
+ */
+function layoutFields(
+  fields: RecordField[],
+  cols: number,
+  width: number,
+  compact: boolean,
+  lines: number,
+): RecordField[][] {
+  const fontSize = compact ? 14 : 15;
+  const cellText =
+    width / Math.max(1, Math.min(cols, fields.length)) -
+    CELL_PADDING[compact ? 'compact' : 'comfortable'];
+  // Average glyph width is ~0.55em in the system fonts; 0.9 leaves slack for word breaks.
+  const tooLong = (f: RecordField) =>
+    width > 0 &&
+    (typeof f.value === 'string' || typeof f.value === 'number') &&
+    String(f.value).length * fontSize * 0.55 > cellText * lines * 0.9;
+
+  const wide = fields.filter(f => f.wide || tooLong(f));
+  const grid = fields.filter(f => !wide.includes(f));
+  const rows: RecordField[][] = [];
+  const n = Math.max(1, Math.min(cols, grid.length));
+  for (let i = 0; i < grid.length; i += n) rows.push(grid.slice(i, i + n));
+  wide.forEach(f => rows.push([f]));
+  return rows;
+}
+
 function Button({
   action,
   fill,
@@ -471,14 +524,25 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 12,
+    columnGap: 12,
+    rowGap: 6,
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  headerEnd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginLeft: 'auto',
+    flexShrink: 0,
+  },
+  titleCompact: { fontSize: 17 },
   titleWrap: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 8,
@@ -489,9 +553,8 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -0.3,
     fontVariant: ['tabular-nums'],
-    flexShrink: 1,
   },
-  subtitle: { fontSize: 13, fontVariant: ['tabular-nums'] },
+  subtitle: { fontSize: 13, fontVariant: ['tabular-nums'], flexShrink: 1 },
   status: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -499,16 +562,17 @@ const styles = StyleSheet.create({
     height: 24,
     paddingHorizontal: 10,
     borderRadius: 12,
-    maxWidth: '45%',
+    flexShrink: 1,
   },
   headerCompact: { paddingVertical: 8, paddingHorizontal: 14 },
   amountHeader: { fontSize: 16 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 12, fontWeight: '700' },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  row: { flexDirection: 'row' },
   cell: {
-    flexGrow: 1,
+    // Equal columns; text wraps inside rather than widening its cell.
+    flex: 1,
     paddingHorizontal: 18,
     paddingVertical: 12,
     minWidth: 0,
@@ -526,9 +590,11 @@ const styles = StyleSheet.create({
 
   footer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    columnGap: 12,
+    rowGap: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -563,7 +629,9 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
-    flexShrink: 1,
+    // Money is never truncated: without room it wraps to its own line instead.
+    flexShrink: 0,
+    marginLeft: 'auto',
     textAlign: 'right',
   },
 });

@@ -15,7 +15,8 @@ Pure React Native (`Animated`, `PanResponder`, `Modal`). No Expo, no Reanimated,
 |---|---|
 | **Header with status** | Title (`#1670354`) and a muted subtitle (the date), with a status pill on the right. The pill has a dot and a colour from its tone: `info` for New, `success` for Approved, `warning` for Not Synced, `danger` for Rejected. |
 | **Attention state** | `tone="warning"` (or any tone) tints the header, colours the border and adds a 4 px edge on the left, so records like "local, not synced" stand out in a long list without an extra banner. |
-| **Responsive field grid** | Uppercase labels over values, with hairline dividers between cells. It uses 2 columns on phones, 3 on small tablets and 4 on wide screens, measured from the card's own width. A short last row stretches to fill the card. Long values wrap to 2 lines, then truncate. |
+| **Responsive field grid** | Uppercase labels over values, with hairline dividers between cells. It uses 2 columns on phones, 3 on small tablets and 4 on wide screens, measured from the card's own width. A short last row stretches to fill the card. |
+| **Long values and big totals** | A value too long for its column in 2 lines, such as a long legal customer name, moves to its own full-width row below the grid, where it can be read in full. The amount is never truncated: if it doesn't fit beside the buttons (or beside the status, with `amountPlacement="header"`), it moves to its own right-aligned line. Font sizes stay the same. |
 | **Footer** | A primary (yellow) and a secondary button, the ⋮ menu button, and a right-aligned amount set in tabular figures. Disabled buttons are dimmed and don't respond. |
 | **Action menu (4–6+ actions)** | A spring-driven bottom sheet. Each action has a tinted icon tile, a label, an optional description and badge, and a chevron. Rows stagger in when the sheet opens. The sheet closes *before* the action runs, so navigation or another modal opened by the action never fights the exit animation. |
 | **Safe destructive actions** | `danger` actions move into their own group at the bottom, behind a divider. `confirmLabel` makes an action two-step: the first tap arms it (red row, solid icon, "Tap again to delete"), and a second tap within 3 s runs it. There is no confirmation dialog. |
@@ -99,12 +100,13 @@ const [open, setOpen] = useState(false);
 | `title` | `string` | — | Record identifier. |
 | `subtitle` | `string` | — | Muted text beside the title. |
 | `status` | `{ label, tone? }` | — | Status pill. `tone` defaults to `info`. |
-| `fields` | `{ label, value, key? }[]` | — | `value` can be text or any element. |
+| `fields` | `{ label, value, key?, wide? }[]` | — | `value` can be text or any element. `wide` forces a full-width row. |
 | `columns` | `number` | 2 / 3 / 4 by width | Fixed grid column count. |
 | `amount` | `string` | — | Right side of the footer. |
 | `amountTone` | `Tone` | green | e.g. `danger` for a credit. |
 | `amountPlacement` | `'footer' \| 'header'` | `'footer'` | `header` puts the amount beside the status. |
-| `density` | `'comfortable' \| 'compact'` | `'comfortable'` | `compact` tightens padding and type. |
+| `density` | `'compact' \| 'comfortable'` | `'compact'` | `comfortable` has roomier padding and type. |
+| `valueLines` | `number` | `2` | Lines a value may wrap to before it moves to a full-width row (and, there, before it truncates). |
 | `primaryAction`, `secondaryAction` | `{ label, icon?, onPress, disabled? }` | — | Footer buttons. |
 | `actions` | `SheetAction[]` | — | Enables the ⋮ button and long-press. |
 | `actionsTitle`, `actionsSubtitle` | `string` | `title` | Menu header. |
