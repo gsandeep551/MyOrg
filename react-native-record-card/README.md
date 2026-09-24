@@ -79,32 +79,7 @@ Icons can be any element, e.g. `icon: <Icon name="content-copy" size={20} color=
 
 ### Sending queued tickets
 
-| Send one or all | Failed ticket | Offline |
-|---|---|---|
-| ![Send sheet](docs/send-sheet-phone.png) | ![Retry a failed ticket](docs/send-sheet-retry.png) | ![Offline state](docs/send-sheet-offline.png) |
-
-`SendQueueSheet` sends records saved on the device, one at a time from a row's small **Send** button or all at once with the main button. Each row shows Sending, ✓ Sent, or a red error with its own Retry. The single solid-yellow button always says what it does: *Send ticket*, *Send all 3 tickets*, *Retry 1 failed*, then *Done*; row buttons are soft yellow so the main action stays obvious. With one ticket there are no row buttons. Offline, sending is disabled and a banner explains that tickets send when the connection is back. When everything is sent the header turns green and the sheet closes itself.
-
-```tsx
-<SendQueueSheet
-  visible={open}
-  onClose={() => setOpen(false)}
-  items={queue.map(t => ({
-    id: t.id,
-    title: `#${t.id} · ${t.type}`,
-    subtitle: `${t.customer} · ${t.well} · ${t.date}`,
-    amount: money(t.amount),
-  }))}
-  send={id => api.sendTicket(id)}          // resolve = sent, reject(new Error(msg)) = failed
-  online={isOnline}
-  total={money(queueTotal)}
-  onDone={({ sent }) => removeFromQueue(sent)}
-  renderIcon={(name, color, size) => <Icon name={ICONS[name]} color={color} size={size} />}
-  bottomInset={insets.bottom}
-/>
-```
-
-Props: `visible`, `onClose`, `items` (`{ id, title, subtitle?, amount? }`), `send`, `online?` (true), `title?` ('Send tickets'), `noun?` (`['ticket', 'tickets']`), `total?`, `onDone?`, `autoCloseMs?` (1400; 0 keeps it open), `renderIcon?` (names: `ticket`, `send`, `check`, `error`, `offline`, `close`, `done`), `bottomInset?`, `maxWidth?` (560), `theme?`.
+The Send Tickets sheet lives in its own package: [`react-native-send-queue`](../react-native-send-queue).
 
 ### Using the sheet on its own
 
