@@ -34,12 +34,19 @@ export interface FilterChipsProps {
   /** Link after the note to leave the paused mode, e.g. clear the ticket number. */
   onResume?: () => void;
   resumeLabel?: string;
+  /**
+   * `wrap` (default): chips flow onto more lines so every filter is visible.
+   * `scroll`: one line that scrolls sideways, for tight headers.
+   */
+  layout?: 'wrap' | 'scroll';
+  /** Prefix each value with its filter name (“Job type: Rig”). Off by default to save width. */
+  showLabels?: boolean;
   renderIcon?: RenderIcon;
   theme?: Partial<FilterTheme>;
   style?: StyleProp<ViewStyle>;
 }
 
-/** One horizontally scrolling row that shows every applied filter at a glance. */
+/** Shows every applied filter at a glance; tap to change, × to remove. */
 export function FilterChips({
   filters,
   value,
@@ -51,6 +58,8 @@ export function FilterChips({
   pausedNote = 'Filters paused',
   onResume,
   resumeLabel = 'Use filters',
+  layout = 'wrap',
+  showLabels = false,
   renderIcon = glyphIcon,
   theme: themeOverrides,
   style,
@@ -79,13 +88,7 @@ export function FilterChips({
   }
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={[styles.scroll, style]}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
+    <Wrapper layout={layout} style={style}>
       {filters.map(def => {
         const on = isActive(def, value[def.key]);
         if (!on && !showInactive) return null;
@@ -110,7 +113,7 @@ export function FilterChips({
             >
               {!on && renderIcon('add', theme.textMuted, 14)}
               <Text numberOfLines={1} style={[styles.chipText, { color: on ? accent.fg : theme.textMuted }]}>
-                {on && <Text style={styles.chipLabel}>{def.label}: </Text>}
+                {on && showLabels && <Text style={styles.chipLabel}>{def.label}: </Text>}
                 {text}
               </Text>
               {on && required && renderIcon('down', accent.fg, 14)}
@@ -134,14 +137,31 @@ export function FilterChips({
           <Text style={[styles.clearAllText, { color: theme.textMuted }]}>Clear all</Text>
         </Pressable>
       )}
+    </Wrapper>
+  );
+}
+
+function Wrapper({ layout, style, children }: { layout: 'wrap' | 'scroll'; style?: StyleProp<ViewStyle>; children: React.ReactNode }) {
+  if (layout === 'wrap') return <View style={[styles.wrap, style]}>{children}</View>;
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={[styles.scroll, style]}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
+      {children}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
   scroll: { flexGrow: 0 },
   content: { alignItems: 'center', gap: 8, paddingVertical: 2 },
   chip: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     height: 34,
@@ -151,7 +171,7 @@ const styles = StyleSheet.create({
     paddingRight: 6,
     gap: 6,
   },
-  chipMain: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: 6, maxWidth: 220 },
+  chipMain: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: 6, flexShrink: 1 },
   chipText: { fontSize: 13, fontWeight: '700', flexShrink: 1 },
   chipLabel: { fontWeight: '500' },
   x: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },

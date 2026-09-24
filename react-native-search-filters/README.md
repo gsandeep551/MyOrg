@@ -18,7 +18,7 @@ Pure React Native (`Animated`, `PanResponder`, `Modal`). No Expo, no Reanimated,
 | | |
 |---|---|
 | **Search first** | The search field is always on screen. It filters as you type, and suits ticket numbers, customers and wells alike. |
-| **Applied filters are visible** | Chips under the search show every applied filter, e.g. *Job type: Rig*, *Location: 807-Milliken*, *Date: Last 7 days*. Tap a chip to change that filter; × removes it. Unused filters appear as dashed *+ Status* chips so they can be found. |
+| **Applied filters are visible** | Chips under the search show every applied filter in full, e.g. *Permian West Production*, *807-Milliken*, *Last 7 days*, *2 statuses*. They wrap onto a second line rather than hiding off-screen. Tap a chip to change that filter; × removes it. Unused filters appear as dashed *+ Status* chips so they can be found. |
 | **Active-filter badge** | The Filters button shows how many filters narrow the list. |
 | **Chips for short lists** | Single-choice filters with up to 8 options (e.g. Job type) show as one-tap chips. Multi-choice filters (e.g. Status) are toggle chips that can show a colour dot and a count. |
 | **Search for long lists** | Longer lists (e.g. Location) open a searchable page inside the sheet, with a hint per option such as *38 rigs will be included*. Tapping a list filter's chip opens this page directly, and picking an option applies it straight away. |
@@ -81,7 +81,7 @@ All three components take `renderIcon={(name, color, size) => …}` for your ico
 ## API
 
 - **`SearchBar`**: `value`, `onChangeText`, `onSubmit?`, `placeholder?`, `filterCount?`, `onPressFilters?`, `loading?`, `keyboardType?`, `renderIcon?`, `theme?`, `style?`.
-- **`FilterChips`**: `filters`, `value`, `onPressChip`, `onRemove`, `onClearAll?`, `showInactive?` (default true), `paused?`, `pausedNote?`, `onResume?`, `resumeLabel?`, `renderIcon?`, `theme?`, `style?`.
+- **`FilterChips`**: `filters`, `value`, `onPressChip`, `onRemove`, `onClearAll?`, `showInactive?` (default true), `layout?` (`'wrap'` default, or `'scroll'` for one sideways-scrolling line), `showLabels?` (prefix values with the filter name; off by default), `paused?`, `pausedNote?`, `onResume?`, `resumeLabel?`, `renderIcon?`, `theme?`, `style?`.
 - **`FilterSheet`**: `visible`, `onClose`, `filters`, `value`, `onApply`, `resultCount?` (number or Promise), `noun?`, `applyLabel?`, `focusKey?`, `title?`, `today?`, `renderIcon?`, `bottomInset?`, `maxWidth?` (600), `theme?`.
 - **Helpers**:
   - `defaultsOf(filters)`: default values for every filter.
