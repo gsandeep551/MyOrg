@@ -19,10 +19,17 @@ export interface RecordField {
   value: ReactNode;
   key?: string;
   /**
-   * Give the field a full-width row below the grid. By default a text value
-   * too long to fit its column in `valueLines` lines is moved there automatically.
+   * Gives the field its own full-width row at the top of the card body.
+   * `true`: always. `'narrow'`: only when the grid has 2 columns or fewer
+   * (phones), so tablets keep every field on one row. The layout depends only
+   * on width, never on the value, so every card in a list has the same shape.
    */
-  wide?: boolean;
+  wide?: boolean | 'narrow';
+  /**
+   * Relative column width (default 1). Give short values like a type less
+   * room so long ones like a customer or well name wrap less.
+   */
+  flex?: number;
 }
 
 export interface CardButton {
@@ -118,8 +125,8 @@ export function RecordCard({
   const hasMenu = !!actions?.length;
   const compact = density === 'compact';
   const rows = useMemo(
-    () => layoutFields(fields, columns ?? autoColumns(width), width, compact, valueLines),
-    [fields, columns, width, compact, valueLines],
+    () => layoutFields(fields, columns ?? autoColumns(width)),
+    [fields, columns, width],
   );
   const attention = tone ? theme.tones[tone] : undefined;
   const statusTone = theme.tones[status?.tone ?? 'info'];
@@ -291,6 +298,7 @@ export function RecordCard({
                 style={[
                   styles.cell,
                   compact && styles.cellCompact,
+                  row.length > 1 && f.flex != null && { flex: f.flex },
                   ci > 0 && {
                     borderLeftWidth: StyleSheet.hairlineWidth,
                     borderColor: theme.border,
@@ -415,36 +423,17 @@ export function RecordCard({
   );
 }
 
-const CELL_PADDING = { comfortable: 36, compact: 28 };
-
 /**
- * Packs fields into rows of `cols`. A wide field, or a text value that would
- * need more than `lines` lines in its column, gets its own full-width row
- * after the grid so it can be read in full.
+ * Wide fields first, each on its own row; the rest packed into rows of `cols`
+ * in their given order.
  */
-function layoutFields(
-  fields: RecordField[],
-  cols: number,
-  width: number,
-  compact: boolean,
-  lines: number,
-): RecordField[][] {
-  const fontSize = compact ? 14 : 15;
-  const cellText =
-    width / Math.max(1, Math.min(cols, fields.length)) -
-    CELL_PADDING[compact ? 'compact' : 'comfortable'];
-  // Average glyph width is ~0.55em in the system fonts; 0.9 leaves slack for word breaks.
-  const tooLong = (f: RecordField) =>
-    width > 0 &&
-    (typeof f.value === 'string' || typeof f.value === 'number') &&
-    String(f.value).length * fontSize * 0.55 > cellText * lines * 0.9;
-
-  const wide = fields.filter(f => f.wide || tooLong(f));
-  const grid = fields.filter(f => !wide.includes(f));
-  const rows: RecordField[][] = [];
+function layoutFields(fields: RecordField[], cols: number): RecordField[][] {
+  const isWide = (f: RecordField) =>
+    f.wide === true || (f.wide === 'narrow' && cols <= 2);
+  const rows: RecordField[][] = fields.filter(isWide).map(f => [f]);
+  const grid = fields.filter(f => !isWide(f));
   const n = Math.max(1, Math.min(cols, grid.length));
   for (let i = 0; i < grid.length; i += n) rows.push(grid.slice(i, i + n));
-  wide.forEach(f => rows.push([f]));
   return rows;
 }
 

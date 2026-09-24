@@ -125,9 +125,9 @@ function TicketList() {
               status={{ label: item.status, tone: STATUS_TONE[item.status] }}
               tone={item.local ? 'warning' : undefined}
               fields={[
-                { label: 'Type', value: item.type },
-                { label: 'Customer', value: item.customer },
-                { label: 'Well', value: item.well },
+                { label: 'Type', value: item.type, flex: 0.7 },
+                { label: 'Customer', value: item.customer, wide: 'narrow', flex: 1.3 },
+                { label: 'Well', value: item.well, flex: 1.3 },
               ]}
               amount={money(item.amount)}
               primaryAction={{ label: 'View', icon: '👁', onPress: () => say('View', item) }}
