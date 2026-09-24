@@ -154,7 +154,7 @@ export function SearchPanel({
 
 const styles = StyleSheet.create({
   wrap: { borderBottomWidth: StyleSheet.hairlineWidth },
-  bar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, minHeight: 56, paddingVertical: 8 },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, minHeight: 56, paddingTop: 10, paddingBottom: 6 },
   icon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute',
@@ -173,5 +173,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 15, fontWeight: '700' },
   summary: { fontSize: 13, lineHeight: 18, marginTop: 1, overflow: 'hidden' },
   clip: { overflow: 'hidden' },
-  content: { position: 'absolute', left: 0, right: 0, top: 0, paddingHorizontal: 16, paddingBottom: 14, gap: 12 },
+  // paddingTop leaves room for badges that sit above their buttons (e.g. the Filters count).
+  content: { position: 'absolute', left: 0, right: 0, top: 0, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 14, gap: 12 },
 });
