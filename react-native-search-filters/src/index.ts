@@ -1,3 +1,5 @@
+export { SearchPanel, summarizeFilters } from './SearchPanel';
+export type { SearchPanelProps } from './SearchPanel';
 export { SearchBar } from './SearchBar';
 export type { SearchBarProps } from './SearchBar';
 export { FilterChips } from './FilterChips';

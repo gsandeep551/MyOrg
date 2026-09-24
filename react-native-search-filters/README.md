@@ -1,6 +1,7 @@
 # react-native-search-filters
 
 Search and filtering for record lists such as Job Tickets:
+- **`SearchPanel`**: a slim collapsible *Search & Filters* bar. Collapsed, it shows a one-line summary of what's applied and a count badge. It expands to reveal the search field and chips.
 - **`SearchBar`**: an always-visible search field with a Filters button that shows how many filters are active.
 - **`FilterChips`**: a row of chips showing the applied filters.
 - **`FilterSheet`**: a bottom sheet for editing every filter, with a live result count.
@@ -17,6 +18,7 @@ Pure React Native (`Animated`, `PanResponder`, `Modal`). No Expo, no Reanimated,
 
 | | |
 |---|---|
+| **Collapsible panel** | `SearchPanel` keeps the header to one slim bar that still says what's applied: *Search & Filters · Rig · 807-Milliken · Last 7 days · 2 statuses* (or *Ticket #16717*). Tap to open the search and chips. Pass `expanded`/`onExpandedChange` to fold it when the list scrolls. |
 | **Search first** | The search field is always on screen. It filters as you type, and suits ticket numbers, customers and wells alike. |
 | **Applied filters are visible** | Chips under the search show every applied filter in full, e.g. *Permian West Production*, *807-Milliken*, *Last 7 days*, *2 statuses*. The row stays one line tall: as many chips as fit, then a *+2* chip that expands the rest in place, and *Less* folds them back. Tap a chip to change that filter; × removes it. Unused filters appear as dashed *+ Status* chips so they can be found. |
 | **Active-filter badge** | The Filters button shows how many filters narrow the list. |
@@ -47,6 +49,12 @@ const [sheet, setSheet] = useState(false);
 const [focusKey, setFocusKey] = useState<string | null>(null);
 const open = (key: string | null) => { setFocusKey(key); setSheet(true); };
 
+<SearchPanel
+  expanded={panelOpen}
+  onExpandedChange={setPanelOpen}
+  summary={query ? `Ticket #${query}` : summarizeFilters(FILTERS, values)}
+  badge={query ? 0 : countActive(FILTERS, values)}
+>
 <SearchBar
   value={query}
   onChangeText={setQuery}
@@ -60,6 +68,10 @@ const open = (key: string | null) => { setFocusKey(key); setSheet(true); };
   onPressChip={open}
   onRemove={key => setValues(v => ({ ...v, [key]: clearedOf(FILTERS.find(f => f.key === key)!) }))}
 />
+</SearchPanel>
+
+<FlatList onScrollBeginDrag={() => setPanelOpen(false)} … />
+
 <FilterSheet
   visible={sheet}
   onClose={() => setSheet(false)}
@@ -80,6 +92,7 @@ All three components take `renderIcon={(name, color, size) => …}` for your ico
 
 ## API
 
+- **`SearchPanel`**: `children` (e.g. `SearchBar` and `FilterChips`), `summary?` (use `summarizeFilters(filters, values)`), `badge?`, `title?`, `expanded?`, `onExpandedChange?`, `defaultExpanded?`, `renderIcon?`, `theme?`, `style?`.
 - **`SearchBar`**: `value`, `onChangeText`, `onSubmit?`, `placeholder?`, `filterCount?`, `onPressFilters?`, `loading?`, `keyboardType?`, `renderIcon?`, `theme?`, `style?`.
 - **`FilterChips`**: `filters`, `value`, `onPressChip`, `onRemove`, `onClearAll?`, `showInactive?` (default true), `layout?` (`'collapse'` default: one line plus a `+N` chip that expands in place; `'wrap'`: every chip over as many lines as needed; `'scroll'`: one sideways-scrolling line), `showLabels?` (prefix values with the filter name; off by default), `paused?`, `pausedNote?`, `onResume?`, `resumeLabel?`, `renderIcon?`, `theme?`, `style?`.
 - **`FilterSheet`**: `visible`, `onClose`, `filters`, `value`, `onApply`, `resultCount?` (number or Promise), `noun?`, `applyLabel?`, `focusKey?`, `title?`, `today?`, `renderIcon?`, `bottomInset?`, `maxWidth?` (600), `theme?`.
