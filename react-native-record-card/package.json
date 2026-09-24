@@ -1,0 +1,24 @@
+{
+  "name": "react-native-record-card",
+  "version": "0.1.0",
+  "description": "A list card for records (tickets, orders, jobs) with a status badge, responsive field grid, inline actions and a bottom-sheet action menu. Zero native dependencies.",
+  "main": "src/index.ts",
+  "react-native": "src/index.ts",
+  "types": "src/index.ts",
+  "files": ["src"],
+  "license": "MIT",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-native": ">=0.72"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "react": "19.1.4",
+    "react-native": "0.81.6",
+    "react-native-safe-area-context": "^5.6.0",
+    "typescript": "^5.9.0"
+  }
+}
