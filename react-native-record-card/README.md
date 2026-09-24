@@ -79,6 +79,10 @@ Icons can be any element, e.g. `icon: <Icon name="content-copy" size={20} color=
 
 ### Sending queued tickets
 
+| Send one or all | Failed ticket | Offline |
+|---|---|---|
+| ![Send sheet](docs/send-sheet-phone.png) | ![Retry a failed ticket](docs/send-sheet-retry.png) | ![Offline state](docs/send-sheet-offline.png) |
+
 `SendQueueSheet` sends records saved on the device, one at a time from a row's small **Send** button or all at once with the main button. Each row shows Sending, ✓ Sent, or a red error with its own Retry. The single solid-yellow button always says what it does: *Send ticket*, *Send all 3 tickets*, *Retry 1 failed*, then *Done*; row buttons are soft yellow so the main action stays obvious. With one ticket there are no row buttons. Offline, sending is disabled and a banner explains that tickets send when the connection is back. When everything is sent the header turns green and the sheet closes itself.
 
 ```tsx
