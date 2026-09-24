@@ -61,7 +61,26 @@ function Profile() {
 }
 ```
 
-See [`example/App.tsx`](example/App.tsx) for a full screen that includes a creatable list and a ranked "top 3" picker with a custom accent.
+### Single select
+
+Search, grouping, creatable options, theming and Clear/Undo all work the same. The value keeps its array shape (`[]` or `[value]`), so you can switch modes without changing types:
+
+```tsx
+const [country, setCountry] = useState<string[]>([]);
+
+<MultiSelect
+  label="Country"
+  options={countries}
+  value={country}
+  onChange={setCountry}
+  allowMultiSelect={false}
+/>;
+// country[0] is the selected value
+```
+
+In single mode rows act as radio buttons: a tap picks and closes the sheet, the tile shows ✓, and multi-only UI is hidden (drag-to-select, rank badges, the selection tray, the counter and the Select all actions).
+
+See [`example/App.tsx`](example/App.tsx) for a full screen that includes a creatable list, a ranked "top 3" picker with a custom accent, and a single-select field.
 
 ## Props
 
@@ -70,11 +89,12 @@ See [`example/App.tsx`](example/App.tsx) for a full screen that includes a creat
 | `options` | `MultiSelectOption<V>[]` | — | `{ value, label, description?, group?, icon?, tint?, disabled? }` |
 | `value` | `V[]` | — | Selected values, **in pick order**. Controlled. |
 | `onChange` | `(value: V[]) => void` | — | Called on every change. Changes apply live; *Done* just closes the sheet. |
+| `allowMultiSelect` | `boolean` | `true` | `false` switches to single-select: tapping a row picks it and closes the sheet. Search works the same in both modes. |
 | `label` | `string` | — | Field label, and the sheet title by default. |
 | `title` | `string` | `label` | Sheet title. |
 | `placeholder` | `string` | `'Select…'` | |
 | `searchPlaceholder` | `string` | `'Search'` | |
-| `max` | `number` | — | Selection limit. |
+| `max` | `number` | — | Selection limit (multi-select only). |
 | `maxTriggerChips` | `number` | `2` | Chips shown in the closed field before `+N`. |
 | `onCreateOption` | `(label) => MultiSelectOption<V> \| undefined` | — | Enables *Create*. Add the returned option to `options` yourself. |
 | `onLimitReached` | `() => void` | — | For haptics or analytics. |

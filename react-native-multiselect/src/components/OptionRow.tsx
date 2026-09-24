@@ -16,10 +16,13 @@ interface Props {
   ranges: Range[];
   selected: boolean;
   order?: number;
+  /** Multi-select rows are checkboxes; single-select rows are radio buttons. */
+  multiple: boolean;
   disabled?: boolean;
   theme: MultiSelectTheme;
   onToggle: (index: number) => void;
-  onPaintStart: (index: number) => void;
+  /** Omitted in single-select mode, so a long press acts as a normal tap. */
+  onPaintStart?: (index: number) => void;
   onPressOut: () => void;
 }
 
@@ -33,8 +36,10 @@ export const OptionRow = memo(function OptionRowImpl(props: Props) {
     ranges,
     selected,
     order,
+    multiple,
     disabled,
     theme,
+    onPaintStart,
   } = props;
   const wash = useRef(new Animated.Value(selected ? 1 : 0)).current;
 
@@ -49,14 +54,18 @@ export const OptionRow = memo(function OptionRowImpl(props: Props) {
   return (
     <Pressable
       onPress={() => props.onToggle(index)}
-      onLongPress={() => props.onPaintStart(index)}
+      onLongPress={onPaintStart ? () => onPaintStart(index) : undefined}
       onPressOut={props.onPressOut}
       delayLongPress={220}
       disabled={disabled}
-      accessibilityRole="checkbox"
+      accessibilityRole={multiple ? 'checkbox' : 'radio'}
       accessibilityState={{ checked: selected, disabled }}
+      aria-checked={selected}
+      aria-disabled={!!disabled}
       accessibilityLabel={description ? `${label}, ${description}` : label}
-      accessibilityHint="Long-press and drag to select several at once"
+      accessibilityHint={
+        multiple ? 'Long-press and drag to select several at once' : undefined
+      }
       style={({ pressed }) => [
         styles.row,
         { opacity: disabled ? 0.4 : pressed ? 0.85 : 1 },

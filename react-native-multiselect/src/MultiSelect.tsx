@@ -49,7 +49,10 @@ export interface MultiSelectOption<V extends OptionValue = string> {
 
 export interface MultiSelectProps<V extends OptionValue = string> {
   options: MultiSelectOption<V>[];
-  /** Selected values, in the order they were picked. */
+  /**
+   * Selected values, in the order they were picked. Always an array, so the
+   * shape doesn't change with `allowMultiSelect`: single mode uses `[]` or `[v]`.
+   */
   value: V[];
   onChange: (value: V[]) => void;
   label?: string;
@@ -57,7 +60,13 @@ export interface MultiSelectProps<V extends OptionValue = string> {
   /** Sheet title; defaults to `label`. */
   title?: string;
   searchPlaceholder?: string;
-  /** Maximum number of selections. */
+  /**
+   * `true` (default): pick any number, with drag-to-select, ranked badges,
+   * the selection tray and bulk actions. `false`: pick one; tapping a row
+   * selects it and closes the sheet. Search behaves the same in both modes.
+   */
+  allowMultiSelect?: boolean;
+  /** Maximum number of selections (multi-select only). */
   max?: number;
   /** How many chips the closed field shows before collapsing into "+N". */
   maxTriggerChips?: number;
@@ -106,6 +115,7 @@ export function MultiSelect<V extends OptionValue = string>(
     placeholder = 'Select…',
     title = label ?? 'Select',
     searchPlaceholder = 'Search',
+    allowMultiSelect = true,
     max,
     maxTriggerChips = 2,
     onCreateOption,
@@ -128,8 +138,9 @@ export function MultiSelect<V extends OptionValue = string>(
   onChangeRef.current = props.onChange;
   const onLimitRef = useRef(props.onLimitReached);
   onLimitRef.current = props.onLimitReached;
+  const multi = allowMultiSelect;
   const maxRef = useRef(max);
-  maxRef.current = max;
+  maxRef.current = multi ? max : undefined;
 
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
@@ -525,7 +536,10 @@ export function MultiSelect<V extends OptionValue = string>(
 
   const clearAll = () => {
     if (!value.length) return;
-    setToast({ message: `Cleared ${value.length}`, undo: value });
+    setToast({
+      message: multi ? `Cleared ${value.length}` : 'Selection cleared',
+      undo: value,
+    });
     commit([]);
   };
 
@@ -546,6 +560,12 @@ export function MultiSelect<V extends OptionValue = string>(
         offset: Math.max(0, offsets[i] - OPTION_ROW_HEIGHT),
         animated: true,
       });
+  };
+
+  /** Single mode: replace the selection, let the tile flip land, then close. */
+  const pick = (v: V) => {
+    if (valueRef.current[0] !== v || valueRef.current.length !== 1) commit([v]);
+    setTimeout(close, 180);
   };
 
   // ---- render -------------------------------------------------------------
@@ -573,24 +593,26 @@ export function MultiSelect<V extends OptionValue = string>(
           <Text style={[styles.headerText, { color: theme.textFaint }]}>
             {item.group.toUpperCase()}
           </Text>
-          <Pressable
-            hitSlop={10}
-            onPress={() => setMany(item.values)}
-            accessibilityRole="button"
-            accessibilityLabel={`${all ? 'Deselect' : 'Select'} all in ${
-              item.group
-            }`}
-            style={styles.headerAction}
-          >
-            {picked > 0 && (
-              <Text style={[styles.headerCount, { color: theme.accent }]}>
-                {picked}/{item.values.length}
+          {multi && (
+            <Pressable
+              hitSlop={10}
+              onPress={() => setMany(item.values)}
+              accessibilityRole="button"
+              accessibilityLabel={`${all ? 'Deselect' : 'Select'} all in ${
+                item.group
+              }`}
+              style={styles.headerAction}
+            >
+              {picked > 0 && (
+                <Text style={[styles.headerCount, { color: theme.accent }]}>
+                  {picked}/{item.values.length}
+                </Text>
+              )}
+              <Text style={[styles.headerActionText, { color: theme.accent }]}>
+                {all ? 'Deselect all' : 'Select all'}
               </Text>
-            )}
-            <Text style={[styles.headerActionText, { color: theme.accent }]}>
-              {all ? 'Deselect all' : 'Select all'}
-            </Text>
-          </Pressable>
+            </Pressable>
+          )}
         </View>
       );
     }
@@ -604,14 +626,17 @@ export function MultiSelect<V extends OptionValue = string>(
         tint={option.tint}
         ranges={item.ranges}
         selected={orderOf.has(option.value)}
-        order={orderOf.get(option.value)}
+        order={multi ? orderOf.get(option.value) : undefined}
+        multiple={multi}
         disabled={option.disabled}
         theme={theme}
         onToggle={i => {
           const r = layoutRef.current.rows[i];
-          if (r?.kind === 'option') toggleValue(r.option.value);
+          if (r?.kind !== 'option') return;
+          if (multi) toggleValue(r.option.value);
+          else pick(r.option.value);
         }}
-        onPaintStart={startPaint}
+        onPaintStart={multi ? startPaint : undefined}
         onPressOut={onRowPressOut}
       />
     );
@@ -778,51 +803,60 @@ export function MultiSelect<V extends OptionValue = string>(
                 <Text style={[styles.title, { color: theme.text }]}>
                   {title}
                 </Text>
-                <Animated.View
-                  style={[
-                    styles.counter,
-                    {
-                      backgroundColor: atLimit
-                        ? theme.accent
-                        : theme.surfaceAlt,
-                      transform: [{ translateX: shake }],
-                    },
-                  ]}
-                >
-                  <Text
+                {multi && (
+                  <Animated.View
                     style={[
-                      styles.counterText,
-                      { color: atLimit ? theme.onAccent : theme.textMuted },
+                      styles.counter,
+                      {
+                        backgroundColor: atLimit
+                          ? theme.accent
+                          : theme.surfaceAlt,
+                        transform: [{ translateX: shake }],
+                      },
                     ]}
                   >
-                    {counterText}
-                  </Text>
-                  {max != null && (
-                    <View
-                      style={[styles.meter, { backgroundColor: theme.border }]}
+                    <Text
+                      style={[
+                        styles.counterText,
+                        { color: atLimit ? theme.onAccent : theme.textMuted },
+                      ]}
                     >
+                      {counterText}
+                    </Text>
+                    {max != null && (
                       <View
                         style={[
-                          styles.meterFill,
-                          {
-                            width: `${Math.min(
-                              100,
-                              (value.length / max) * 100,
-                            )}%`,
-                            backgroundColor: atLimit
-                              ? theme.onAccent
-                              : theme.accent,
-                          },
+                          styles.meter,
+                          { backgroundColor: theme.border },
                         ]}
-                      />
-                    </View>
-                  )}
-                </Animated.View>
+                      >
+                        <View
+                          style={[
+                            styles.meterFill,
+                            {
+                              width: `${Math.min(
+                                100,
+                                (value.length / max) * 100,
+                              )}%`,
+                              backgroundColor: atLimit
+                                ? theme.onAccent
+                                : theme.accent,
+                            },
+                          ]}
+                        />
+                      </View>
+                    )}
+                  </Animated.View>
+                )}
               </View>
             </View>
 
             <View
-              style={[styles.search, { backgroundColor: theme.surfaceAlt }]}
+              style={[
+                styles.search,
+                !multi && styles.searchSolo,
+                { backgroundColor: theme.surfaceAlt },
+              ]}
             >
               <Text style={[styles.searchIcon, { color: theme.textFaint }]}>
                 ⌕
@@ -854,78 +888,82 @@ export function MultiSelect<V extends OptionValue = string>(
             </View>
 
             {/* Fixed-height tray so the list never jumps under a dragging finger. */}
-            <ScrollView
-              ref={trayRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.tray}
-              contentContainerStyle={styles.trayContent}
-              onContentSizeChange={onTrayContentChange}
-              keyboardShouldPersistTaps="handled"
-            >
-              {selectedOptions.length === 0 ? (
-                <Text style={[styles.trayEmpty, { color: theme.textFaint }]}>
-                  Nothing picked yet: tap a row, or hold and drag to pick
-                  several
-                </Text>
-              ) : (
-                selectedOptions.map((o, i) => (
-                  <Pressable
-                    key={String(o.value)}
-                    onPress={() => reveal(o.value)}
-                    accessibilityLabel={`${o.label}, pick ${
-                      i + 1
-                    }. Tap to show in list`}
-                    accessibilityActions={[
-                      { name: 'remove', label: `Remove ${o.label}` },
-                    ]}
-                    onAccessibilityAction={e =>
-                      e.nativeEvent.actionName === 'remove' &&
-                      toggleValue(o.value)
-                    }
-                    style={[
-                      styles.trayChip,
-                      {
-                        borderColor: theme.border,
-                        backgroundColor: theme.surface,
-                      },
-                    ]}
-                  >
-                    <View
+            {multi && (
+              <ScrollView
+                ref={trayRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.tray}
+                contentContainerStyle={styles.trayContent}
+                onContentSizeChange={onTrayContentChange}
+                keyboardShouldPersistTaps="handled"
+              >
+                {selectedOptions.length === 0 ? (
+                  <Text style={[styles.trayEmpty, { color: theme.textFaint }]}>
+                    Nothing picked yet: tap a row, or hold and drag to pick
+                    several
+                  </Text>
+                ) : (
+                  selectedOptions.map((o, i) => (
+                    <Pressable
+                      key={String(o.value)}
+                      onPress={() => reveal(o.value)}
+                      accessibilityLabel={`${o.label}, pick ${
+                        i + 1
+                      }. Tap to show in list`}
+                      accessibilityActions={[
+                        { name: 'remove', label: `Remove ${o.label}` },
+                      ]}
+                      onAccessibilityAction={e =>
+                        e.nativeEvent.actionName === 'remove' &&
+                        toggleValue(o.value)
+                      }
                       style={[
-                        styles.trayOrder,
-                        { backgroundColor: theme.accent },
+                        styles.trayChip,
+                        {
+                          borderColor: theme.border,
+                          backgroundColor: theme.surface,
+                        },
                       ]}
                     >
-                      <Text
+                      <View
                         style={[
-                          styles.trayOrderText,
-                          { color: theme.onAccent },
+                          styles.trayOrder,
+                          { backgroundColor: theme.accent },
                         ]}
                       >
-                        {i + 1}
+                        <Text
+                          style={[
+                            styles.trayOrderText,
+                            { color: theme.onAccent },
+                          ]}
+                        >
+                          {i + 1}
+                        </Text>
+                      </View>
+                      <Text
+                        numberOfLines={1}
+                        style={[styles.chipText, { color: theme.text }]}
+                      >
+                        {o.label}
                       </Text>
-                    </View>
-                    <Text
-                      numberOfLines={1}
-                      style={[styles.chipText, { color: theme.text }]}
-                    >
-                      {o.label}
-                    </Text>
-                    <Pressable
-                      hitSlop={8}
-                      onPress={() => toggleValue(o.value)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Remove ${o.label}`}
-                    >
-                      <Text style={[styles.chipX, { color: theme.textMuted }]}>
-                        ×
-                      </Text>
+                      <Pressable
+                        hitSlop={8}
+                        onPress={() => toggleValue(o.value)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remove ${o.label}`}
+                      >
+                        <Text
+                          style={[styles.chipX, { color: theme.textMuted }]}
+                        >
+                          ×
+                        </Text>
+                      </Pressable>
                     </Pressable>
-                  </Pressable>
-                ))
-              )}
-            </ScrollView>
+                  ))
+                )}
+              </ScrollView>
+            )}
 
             {q ? (
               <View style={[styles.actions, { borderColor: theme.border }]}>
@@ -937,6 +975,10 @@ export function MultiSelect<V extends OptionValue = string>(
                     <Pressable
                       onPress={() => {
                         const created = onCreateOption!(q);
+                        if (created && !multi) {
+                          setQuery('');
+                          return pick(created.value);
+                        }
                         if (created) {
                           const [next, ok] = addValues(valueRef.current, [
                             created.value,
@@ -955,7 +997,7 @@ export function MultiSelect<V extends OptionValue = string>(
                       </Text>
                     </Pressable>
                   )}
-                  {matchValues.length > 0 && (
+                  {multi && matchValues.length > 0 && (
                     <Pressable
                       onPress={() => setMany(matchValues)}
                       style={[
@@ -1077,7 +1119,7 @@ export function MultiSelect<V extends OptionValue = string>(
                 ]}
               >
                 <Text style={[styles.primaryText, { color: theme.surface }]}>
-                  {value.length ? `Done · ${value.length}` : 'Done'}
+                  {multi && value.length ? `Done · ${value.length}` : 'Done'}
                 </Text>
               </Pressable>
             </View>
@@ -1190,6 +1232,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 46,
   },
+  searchSolo: { marginBottom: 8 },
   searchIcon: { fontSize: 20, marginRight: 6 },
   searchInput: { flex: 1, fontSize: 16, paddingVertical: 0 },
   searchClear: { fontSize: 22, paddingHorizontal: 4 },

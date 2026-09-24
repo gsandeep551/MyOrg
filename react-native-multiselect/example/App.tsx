@@ -141,6 +141,7 @@ export default function App() {
     'coffee',
   ]);
   const [top3, setTop3] = useState<string[]>([]);
+  const [primary, setPrimary] = useState<string[]>(['ts']);
 
   return (
     <SafeAreaProvider>
@@ -184,6 +185,16 @@ export default function App() {
               accentSoft: 'rgba(224,72,43,0.09)',
               highlight: 'rgba(224,72,43,0.18)',
             }}
+          />
+
+          <MultiSelect
+            label="Primary skill"
+            title="Your primary skill"
+            placeholder="Pick one"
+            options={options}
+            value={primary}
+            onChange={setPrimary}
+            allowMultiSelect={false}
           />
         </ScrollView>
       </SafeAreaView>
