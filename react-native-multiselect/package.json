@@ -1,0 +1,23 @@
+{
+  "name": "react-native-multiselect",
+  "version": "0.1.0",
+  "description": "A bottom-sheet multi-select for React Native with drag-to-paint selection, ranked picks, fuzzy search and undo. Zero native dependencies.",
+  "main": "src/index.ts",
+  "react-native": "src/index.ts",
+  "types": "src/index.ts",
+  "files": ["src"],
+  "license": "MIT",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-native": ">=0.72"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "react": "19.1.4",
+    "react-native": "0.81.6",
+    "typescript": "^5.9.0"
+  }
+}
