@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -35,10 +35,12 @@ export interface FilterChipsProps {
   onResume?: () => void;
   resumeLabel?: string;
   /**
-   * `wrap` (default): chips flow onto more lines so every filter is visible.
-   * `scroll`: one line that scrolls sideways, for tight headers.
+   * `collapse` (default): one line with as many chips as fit and a `+N` chip
+   * that expands the rest in place; `Less` folds them back.
+   * `wrap`: always show every chip, over as many lines as needed.
+   * `scroll`: one line that scrolls sideways.
    */
-  layout?: 'wrap' | 'scroll';
+  layout?: 'collapse' | 'wrap' | 'scroll';
   /** Prefix each value with its filter name (“Job type: Rig”). Off by default to save width. */
   showLabels?: boolean;
   renderIcon?: RenderIcon;
@@ -58,7 +60,7 @@ export function FilterChips({
   pausedNote = 'Filters paused',
   onResume,
   resumeLabel = 'Use filters',
-  layout = 'wrap',
+  layout = 'collapse',
   showLabels = false,
   renderIcon = glyphIcon,
   theme: themeOverrides,
@@ -68,6 +70,9 @@ export function FilterChips({
   const theme = useMemo(() => resolveTheme(scheme, themeOverrides), [scheme, themeOverrides]);
   const accent = theme.tones.accent;
   const removable = countActive(filters, value);
+  const [expanded, setExpanded] = useState(false);
+  const [rowWidth, setRowWidth] = useState(0);
+  const [widths, setWidths] = useState<Record<string, number>>({});
 
   if (paused) {
     return (
@@ -87,16 +92,16 @@ export function FilterChips({
     );
   }
 
-  return (
-    <Wrapper layout={layout} style={style}>
-      {filters.map(def => {
-        const on = isActive(def, value[def.key]);
-        if (!on && !showInactive) return null;
-        const required = def.type === 'single' && def.required;
-        const text = on ? summarize(def, value[def.key]) : def.label;
-        return (
+  const chips = filters.flatMap(def => {
+    const on = isActive(def, value[def.key]);
+    if (!on && !showInactive) return [];
+    const required = def.type === 'single' && def.required;
+    const text = on ? summarize(def, value[def.key]) : def.label;
+    return [
+      {
+        key: def.key,
+        node: (
           <View
-            key={def.key}
             style={[
               styles.chip,
               on
@@ -130,16 +135,99 @@ export function FilterChips({
               </Pressable>
             )}
           </View>
-        );
-      })}
-      {!!onClearAll && removable > 1 && (
-        <Pressable onPress={onClearAll} accessibilityRole="button" hitSlop={8} style={styles.clearAll}>
-          <Text style={[styles.clearAllText, { color: theme.textMuted }]}>Clear all</Text>
-        </Pressable>
+        ),
+      },
+    ];
+  });
+
+  const clearAll = !!onClearAll && removable > 1 && (
+    <Pressable key="__clear" onPress={onClearAll} accessibilityRole="button" hitSlop={8} style={styles.clearAll}>
+      <Text style={[styles.clearAllText, { color: theme.textMuted }]}>Clear all</Text>
+    </Pressable>
+  );
+
+  const pill = (label: string, onPress: () => void, a11y: string) => (
+    <Pressable
+      key="__more"
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={a11y}
+      hitSlop={6}
+      style={({ pressed }) => [styles.more, { backgroundColor: theme.secondary, opacity: pressed ? 0.7 : 1 }]}
+    >
+      <Text style={[styles.moreText, { color: theme.text }]}>{label}</Text>
+    </Pressable>
+  );
+
+  if (layout !== 'collapse') {
+    return (
+      <Wrapper layout={layout} style={style}>
+        {chips.map(c => (
+          <React.Fragment key={c.key}>{c.node}</React.Fragment>
+        ))}
+        {clearAll}
+      </Wrapper>
+    );
+  }
+
+  // ---- collapse: measure every chip off-screen, then show what fits on line one.
+  const measured = rowWidth > 0 && chips.every(c => widths[c.key] != null);
+  let visible = chips.length;
+  if (measured) {
+    // Pack chips left to right; if some don't fit, keep room for the “+N” chip.
+    const lineWidth = (n: number) => chips.slice(0, n).reduce((sum, c, i) => sum + widths[c.key] + (i ? GAP : 0), 0);
+    if (lineWidth(chips.length) > rowWidth) {
+      visible = 1;
+      while (visible < chips.length && lineWidth(visible + 1) + GAP + MORE_WIDTH <= rowWidth) visible++;
+    }
+  }
+  const hidden = chips.length - visible;
+
+  return (
+    <View style={style} onLayout={e => setRowWidth(Math.round(e.nativeEvent.layout.width))}>
+      {/* Invisible copy used only to measure each chip's natural width. */}
+      <View
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={styles.measure}
+      >
+        {chips.map(c => (
+          <View
+            key={c.key}
+            style={styles.measureItem}
+            onLayout={e => {
+              const w = Math.ceil(e.nativeEvent.layout.width);
+              setWidths(b => (b[c.key] === w ? b : { ...b, [c.key]: w }));
+            }}
+          >
+            {c.node}
+          </View>
+        ))}
+      </View>
+
+      {expanded || !hidden ? (
+        <View style={styles.wrap}>
+          {chips.map(c => (
+            <React.Fragment key={c.key}>{c.node}</React.Fragment>
+          ))}
+          {hidden > 0 && pill('Less', () => setExpanded(false), 'Show fewer filters')}
+          {clearAll}
+        </View>
+      ) : (
+        <View style={[styles.row, !measured && styles.hiddenRow]}>
+          {chips.slice(0, visible).map(c => (
+            <React.Fragment key={c.key}>{c.node}</React.Fragment>
+          ))}
+          {pill(`+${hidden}`, () => setExpanded(true), `Show ${hidden} more filter${hidden === 1 ? '' : 's'}`)}
+        </View>
       )}
-    </Wrapper>
+    </View>
   );
 }
+
+const GAP = 8;
+const MORE_WIDTH = 48;
 
 function Wrapper({ layout, style, children }: { layout: 'wrap' | 'scroll'; style?: StyleProp<ViewStyle>; children: React.ReactNode }) {
   if (layout === 'wrap') return <View style={[styles.wrap, style]}>{children}</View>;
@@ -157,7 +245,13 @@ function Wrapper({ layout, style, children }: { layout: 'wrap' | 'scroll'; style
 }
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
+  wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: GAP },
+  row: { flexDirection: 'row', alignItems: 'center', gap: GAP, overflow: 'hidden' },
+  hiddenRow: { opacity: 0 },
+  measure: { position: 'absolute', left: 0, top: 0, opacity: 0, alignItems: 'flex-start' },
+  measureItem: { flexDirection: 'row' },
+  more: { height: 34, minWidth: 40, paddingHorizontal: 12, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  moreText: { fontSize: 13, fontWeight: '800', fontVariant: ['tabular-nums'] },
   scroll: { flexGrow: 0 },
   content: { alignItems: 'center', gap: 8, paddingVertical: 2 },
   chip: {
