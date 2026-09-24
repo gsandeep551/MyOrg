@@ -40,6 +40,10 @@ export interface RecordCardProps {
   columns?: number;
   amount?: string;
   amountTone?: Tone;
+  /** `header` shows the amount beside the status instead of in the footer. */
+  amountPlacement?: 'footer' | 'header';
+  /** `compact` tightens padding and type, fitting about 25% more cards per screen. */
+  density?: 'comfortable' | 'compact';
   primaryAction?: CardButton;
   secondaryAction?: CardButton;
   /** Overflow menu. Shows a ⋮ button; long-pressing the card opens it too. */
@@ -48,6 +52,8 @@ export interface RecordCardProps {
   actionsTitle?: string;
   actionsSubtitle?: string;
   actionsLayout?: 'list' | 'grid';
+  /** Custom content at the top of the menu, e.g. a summary of the record. */
+  actionsHeader?: ReactNode;
   /**
    * Flags the card for attention (e.g. `warning` for "not synced"): tints the
    * header, draws a coloured edge and border.
@@ -73,12 +79,15 @@ export function RecordCard({
   columns,
   amount,
   amountTone,
+  amountPlacement = 'footer',
+  density = 'comfortable',
   primaryAction,
   secondaryAction,
   actions,
   actionsTitle,
   actionsSubtitle,
   actionsLayout,
+  actionsHeader,
   tone,
   onPress,
   bottomInset,
@@ -102,6 +111,8 @@ export function RecordCard({
   );
   const attention = tone ? theme.tones[tone] : undefined;
   const statusTone = theme.tones[status?.tone ?? 'info'];
+  const compact = density === 'compact';
+  const amountInHeader = amountPlacement === 'header' && !!amount;
   const amountColor = amountTone ? theme.tones[amountTone].fg : theme.amount;
 
   const pressTo = (toValue: number) =>
@@ -196,6 +207,7 @@ export function RecordCard({
         <View
           style={[
             styles.header,
+            compact && styles.headerCompact,
             {
               backgroundColor: attention ? attention.wash : theme.surfaceAlt,
               borderBottomColor: theme.border,
@@ -233,6 +245,14 @@ export function RecordCard({
               </Text>
             </View>
           )}
+          {amountInHeader && (
+            <Text
+              numberOfLines={1}
+              style={[styles.amount, styles.amountHeader, { color: amountColor }]}
+            >
+              {amount}
+            </Text>
+          )}
         </View>
 
         {/* ---------- fields ---------- */}
@@ -245,6 +265,7 @@ export function RecordCard({
                   key={f.key ?? f.label}
                   style={[
                     styles.cell,
+                    compact && styles.cellCompact,
                     {
                       // Grows so a short last row fills the card width.
                       flexBasis: `${100 / cols}%`,
@@ -256,7 +277,11 @@ export function RecordCard({
                 >
                   <Text
                     numberOfLines={1}
-                    style={[styles.fieldLabel, { color: theme.textFaint }]}
+                    style={[
+                      styles.fieldLabel,
+                      compact && styles.fieldLabelCompact,
+                      { color: theme.textFaint },
+                    ]}
                   >
                     {f.label.toUpperCase()}
                   </Text>
@@ -264,7 +289,11 @@ export function RecordCard({
                   typeof f.value === 'number' ? (
                     <Text
                       numberOfLines={2}
-                      style={[styles.fieldValue, { color: theme.text }]}
+                      style={[
+                        styles.fieldValue,
+                        compact && styles.fieldValueCompact,
+                        { color: theme.text },
+                      ]}
                     >
                       {f.value}
                     </Text>
@@ -280,10 +309,14 @@ export function RecordCard({
         {children}
 
         {/* ---------- footer ---------- */}
-        {(primaryAction || secondaryAction || hasMenu || amount) && (
+        {(primaryAction ||
+          secondaryAction ||
+          hasMenu ||
+          (amount && !amountInHeader)) && (
           <View
             style={[
               styles.footer,
+              compact && styles.footerCompact,
               {
                 backgroundColor: theme.surfaceAlt,
                 borderTopColor: theme.border,
@@ -297,6 +330,7 @@ export function RecordCard({
                   fill={theme.accent}
                   ink={theme.onAccent}
                   pressed={theme.pressed}
+                  compact={compact}
                 />
               )}
               {secondaryAction && (
@@ -305,6 +339,7 @@ export function RecordCard({
                   fill={theme.secondary}
                   ink={theme.text}
                   pressed={theme.pressed}
+                  compact={compact}
                 />
               )}
               {hasMenu && (
@@ -315,6 +350,7 @@ export function RecordCard({
                   accessibilityLabel={`More actions for ${title}`}
                   style={({ pressed }) => [
                     styles.more,
+                    compact && styles.moreCompact,
                     {
                       backgroundColor: theme.secondary,
                       opacity: pressed ? 0.6 : 1,
@@ -330,7 +366,7 @@ export function RecordCard({
                 </Pressable>
               )}
             </View>
-            {!!amount && (
+            {!!amount && !amountInHeader && (
               <Text
                 numberOfLines={1}
                 style={[styles.amount, { color: amountColor }]}
@@ -349,6 +385,7 @@ export function RecordCard({
           actions={actions!}
           title={actionsTitle ?? title}
           subtitle={actionsSubtitle}
+          header={actionsHeader}
           layout={actionsLayout}
           bottomInset={bottomInset}
           theme={themeOverrides}
@@ -363,11 +400,13 @@ function Button({
   fill,
   ink,
   pressed: pressedFill,
+  compact,
 }: {
   action: CardButton;
   fill: string;
   ink: string;
   pressed: string;
+  compact?: boolean;
 }) {
   return (
     <Pressable
@@ -379,6 +418,7 @@ function Button({
       accessibilityState={{ disabled: !!action.disabled }}
       style={[
         styles.button,
+        compact && styles.buttonCompact,
         { backgroundColor: fill },
         action.disabled && styles.disabled,
       ]}
@@ -461,6 +501,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     maxWidth: '45%',
   },
+  headerCompact: { paddingVertical: 8, paddingHorizontal: 14 },
+  amountHeader: { fontSize: 16 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 12, fontWeight: '700' },
 
@@ -471,6 +513,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     minWidth: 0,
   },
+  cellCompact: { paddingHorizontal: 14, paddingVertical: 7 },
+  fieldLabelCompact: { fontSize: 10, marginBottom: 2 },
+  fieldValueCompact: { fontSize: 14 },
   fieldLabel: {
     fontSize: 11,
     fontWeight: '700',
@@ -488,6 +533,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
+  footerCompact: { paddingHorizontal: 10, paddingVertical: 7 },
+  buttonCompact: { height: 32, paddingHorizontal: 12 },
+  moreCompact: { width: 32, height: 32 },
   buttons: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   button: {
     flexDirection: 'row',

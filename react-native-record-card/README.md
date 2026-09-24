@@ -103,10 +103,13 @@ const [open, setOpen] = useState(false);
 | `columns` | `number` | 2 / 3 / 4 by width | Fixed grid column count. |
 | `amount` | `string` | — | Right side of the footer. |
 | `amountTone` | `Tone` | green | e.g. `danger` for a credit. |
+| `amountPlacement` | `'footer' \| 'header'` | `'footer'` | `header` puts the amount beside the status. |
+| `density` | `'comfortable' \| 'compact'` | `'comfortable'` | `compact` tightens padding and type. |
 | `primaryAction`, `secondaryAction` | `{ label, icon?, onPress, disabled? }` | — | Footer buttons. |
 | `actions` | `SheetAction[]` | — | Enables the ⋮ button and long-press. |
 | `actionsTitle`, `actionsSubtitle` | `string` | `title` | Menu header. |
 | `actionsLayout` | `'list' \| 'grid'` | `'list'` | |
+| `actionsHeader` | `ReactNode` | — | Custom content at the top of the menu, e.g. a ticket summary. |
 | `tone` | `Tone` | — | Attention state. |
 | `onPress` | `() => void` | — | Whole-card tap. |
 | `bottomInset` | `number` | `0` | Forwarded to the sheet. |
