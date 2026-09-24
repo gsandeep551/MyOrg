@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Easing,
   KeyboardAvoidingView,
@@ -38,12 +39,16 @@ export interface FilterSheetProps {
   value: FilterValues;
   onApply: (value: FilterValues) => void;
   /**
-   * Live result count for a draft, for the “Show 23 tickets” button. Return
-   * `undefined` when it's unknown (the button then says “Show results”).
+   * Optional result count for a draft, for a “Show 23 tickets” button. Leave it
+   * out when filtering happens on the server and there's no count endpoint:
+   * the button then says “Search tickets”. It may return a Promise (e.g. a
+   * count-only API call); calls are debounced and stale answers are ignored.
    */
-  resultCount?: (draft: FilterValues) => number | undefined;
-  /** Nouns for the result button. */
+  resultCount?: (draft: FilterValues) => number | Promise<number> | undefined;
+  /** Nouns for the button, e.g. `['ticket', 'tickets']`. */
   noun?: [string, string];
+  /** Main button label when no count is available. Defaults to `Search <nouns>`. */
+  applyLabel?: string;
   /**
    * Open straight at one filter (e.g. after tapping its chip). A list filter
    * opens its searchable list, and picking an option applies and closes.
@@ -72,6 +77,7 @@ export function FilterSheet({
   onApply,
   resultCount,
   noun = ['result', 'results'],
+  applyLabel,
   focusKey,
   title = 'Filters',
   today: todayProp,
@@ -98,6 +104,33 @@ export function FilterSheet({
   visibleRef.current = visible;
   const sheetY = useRef(new Animated.Value(windowHeight)).current;
   const pageX = useRef(new Animated.Value(sheetWidth)).current;
+
+  // ---- optional result count (sync, or async from the server) --------------
+  const [count, setCount] = useState<number | undefined>(undefined);
+  const [counting, setCounting] = useState(false);
+  const countRef = useRef(resultCount);
+  countRef.current = resultCount;
+  const requestId = useRef(0);
+  const draftKey = JSON.stringify(draft);
+  useEffect(() => {
+    if (!visible || !countRef.current) return;
+    const id = ++requestId.current;
+    const t = setTimeout(() => {
+      const r = countRef.current?.(draft);
+      if (r == null || typeof r === 'number') {
+        setCount(r ?? undefined);
+        setCounting(false);
+        return;
+      }
+      setCounting(true);
+      r.then(
+        n => id === requestId.current && (setCount(n), setCounting(false)),
+        () => id === requestId.current && (setCount(undefined), setCounting(false)),
+      );
+    }, 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey, visible]);
 
   const openPage = (key: string, animate = true) => {
     setQuery('');
@@ -147,7 +180,6 @@ export function FilterSheet({
   if (!mounted) return null;
 
   const set = (key: string, v: FilterValues[string]) => setDraft(d => ({ ...d, [key]: v }));
-  const count = resultCount?.(draft);
   const apply = (next = draft) => {
     onApply(next);
     onClose();
@@ -321,7 +353,14 @@ export function FilterSheet({
     else closePage();
   };
 
-  const cta = count == null ? 'Show results' : count === 0 ? `No ${noun[1]} match` : `Show ${count} ${count === 1 ? noun[0] : noun[1]}`;
+  const cta = counting
+    ? 'Counting…'
+    : count == null
+      ? applyLabel ?? `Search ${noun[1]}`
+      : count === 0
+        ? `No ${noun[1]} match`
+        : `Show ${count} ${count === 1 ? noun[0] : noun[1]}`;
+  const empty = !counting && count === 0;
 
   return (
     <Modal visible transparent animationType="none" onRequestClose={page && !quick ? closePage : onClose} statusBarTranslucent>
@@ -376,15 +415,15 @@ export function FilterSheet({
           <View style={[styles.footer, { borderTopColor: theme.border, paddingBottom: 12 + bottomInset }]}>
             <Pressable
               onPress={() => apply()}
-              disabled={count === 0}
+              disabled={empty}
               accessibilityRole="button"
               style={({ pressed }) => [
                 styles.cta,
-                { backgroundColor: count === 0 ? theme.secondary : theme.accent, transform: [{ scale: pressed ? 0.98 : 1 }] },
+                { backgroundColor: empty ? theme.secondary : theme.accent, transform: [{ scale: pressed ? 0.98 : 1 }] },
               ]}
             >
-              {count !== 0 && renderIcon('search', theme.onAccent, 18)}
-              <Text style={[styles.ctaText, { color: count === 0 ? theme.textFaint : theme.onAccent }]}>{cta}</Text>
+              {counting ? <ActivityIndicator size="small" color={theme.onAccent} /> : !empty && renderIcon('search', theme.onAccent, 18)}
+              <Text style={[styles.ctaText, { color: empty ? theme.textFaint : theme.onAccent }]}>{cta}</Text>
             </Pressable>
           </View>
 

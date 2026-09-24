@@ -23,7 +23,8 @@ Pure React Native (`Animated`, `PanResponder`, `Modal`). No Expo, no Reanimated,
 | **Chips for short lists** | Single-choice filters with up to 8 options (e.g. Job type) show as one-tap chips. Multi-choice filters (e.g. Status) are toggle chips that can show a colour dot and a count. |
 | **Search for long lists** | Longer lists (e.g. Location) open a searchable page inside the sheet, with a hint per option such as *38 rigs will be included*. Tapping a list filter's chip opens this page directly, and picking an option applies it straight away. |
 | **Dates without typing** | Presets (Today, Yesterday, Last 7 days, This week, This month) or Custom, which opens a range calendar: tap the start date, then the end date. Future days are disabled. |
-| **Result count before applying** | The main button counts live, e.g. *Show 23 tickets*, and says *No tickets match* (disabled) before you apply an empty result. |
+| **Built for server-side search** | The sheet edits a draft and sends nothing until you press **Search tickets**, so each search is one request. If your API has a count endpoint, return a Promise from `resultCount` and the button reads *Show 23 tickets* (debounced, with stale answers ignored); otherwise leave it out. |
+| **Ticket number or filters** | Pass `paused` to `FilterChips` while a ticket number is typed: the chips collapse into a *Filters paused* pill with a *Use filters* link, making it clear the number search ignores filters. |
 | **Draft editing** | The sheet edits a copy. Nothing changes until you press the button, and Reset goes back to the defaults. |
 
 Filters are described as data:
@@ -65,7 +66,8 @@ const open = (key: string | null) => { setFocusKey(key); setSheet(true); };
   filters={FILTERS}
   value={values}
   onApply={setValues}
-  resultCount={draft => countTickets(draft, query)}   // or undefined if you can't count locally
+  // Optional: only if your API can count. Otherwise the button says “Search tickets”.
+  resultCount={draft => api.countTickets(draft)}
   noun={['ticket', 'tickets']}
   focusKey={focusKey}
   bottomInset={insets.bottom}
@@ -79,8 +81,8 @@ All three components take `renderIcon={(name, color, size) => …}` for your ico
 ## API
 
 - **`SearchBar`**: `value`, `onChangeText`, `onSubmit?`, `placeholder?`, `filterCount?`, `onPressFilters?`, `loading?`, `keyboardType?`, `renderIcon?`, `theme?`, `style?`.
-- **`FilterChips`**: `filters`, `value`, `onPressChip`, `onRemove`, `onClearAll?`, `showInactive?` (default true), `renderIcon?`, `theme?`, `style?`.
-- **`FilterSheet`**: `visible`, `onClose`, `filters`, `value`, `onApply`, `resultCount?`, `noun?`, `focusKey?`, `title?`, `today?`, `renderIcon?`, `bottomInset?`, `maxWidth?` (600), `theme?`.
+- **`FilterChips`**: `filters`, `value`, `onPressChip`, `onRemove`, `onClearAll?`, `showInactive?` (default true), `paused?`, `pausedNote?`, `onResume?`, `resumeLabel?`, `renderIcon?`, `theme?`, `style?`.
+- **`FilterSheet`**: `visible`, `onClose`, `filters`, `value`, `onApply`, `resultCount?` (number or Promise), `noun?`, `applyLabel?`, `focusKey?`, `title?`, `today?`, `renderIcon?`, `bottomInset?`, `maxWidth?` (600), `theme?`.
 - **Helpers**:
   - `defaultsOf(filters)`: default values for every filter.
   - `clearedOf(filter)`: the "no filter" value for one filter.

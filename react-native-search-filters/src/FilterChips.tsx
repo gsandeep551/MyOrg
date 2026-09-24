@@ -24,6 +24,16 @@ export interface FilterChipsProps {
   onClearAll?: () => void;
   /** Also show unused filters as dashed “+ Label” chips, so they can be found. */
   showInactive?: boolean;
+  /**
+   * Filters don't apply right now, e.g. while searching by ticket number.
+   * Chips dim and can't be tapped, and `pausedNote` is shown before them.
+   */
+  paused?: boolean;
+  /** e.g. `Filters paused while searching by ticket #`. */
+  pausedNote?: string;
+  /** Link after the note to leave the paused mode, e.g. clear the ticket number. */
+  onResume?: () => void;
+  resumeLabel?: string;
   renderIcon?: RenderIcon;
   theme?: Partial<FilterTheme>;
   style?: StyleProp<ViewStyle>;
@@ -37,6 +47,10 @@ export function FilterChips({
   onRemove,
   onClearAll,
   showInactive = true,
+  paused = false,
+  pausedNote = 'Filters paused',
+  onResume,
+  resumeLabel = 'Use filters',
   renderIcon = glyphIcon,
   theme: themeOverrides,
   style,
@@ -45,6 +59,24 @@ export function FilterChips({
   const theme = useMemo(() => resolveTheme(scheme, themeOverrides), [scheme, themeOverrides]);
   const accent = theme.tones.accent;
   const removable = countActive(filters, value);
+
+  if (paused) {
+    return (
+      <View style={[styles.pausedRow, style]}>
+        <View style={[styles.pausedPill, { backgroundColor: theme.secondary }]}>
+          {renderIcon('filter', theme.textMuted, 14)}
+          <Text numberOfLines={1} style={[styles.pausedText, { color: theme.textMuted }]}>
+            {pausedNote}
+          </Text>
+        </View>
+        {onResume && (
+          <Pressable onPress={onResume} accessibilityRole="button" hitSlop={8}>
+            <Text style={[styles.clearAllText, { color: theme.tones.accent.fg }]}>{resumeLabel}</Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  }
 
   return (
     <ScrollView
@@ -123,6 +155,17 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 13, fontWeight: '700', flexShrink: 1 },
   chipLabel: { fontWeight: '500' },
   x: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  pausedRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 38 },
+  pausedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 34,
+    paddingHorizontal: 12,
+    borderRadius: 17,
+    flexShrink: 1,
+  },
+  pausedText: { fontSize: 13, fontWeight: '600', flexShrink: 1 },
   clearAll: { paddingHorizontal: 6, height: 34, justifyContent: 'center' },
   clearAllText: { fontSize: 13, fontWeight: '700', textDecorationLine: 'underline' },
 });
