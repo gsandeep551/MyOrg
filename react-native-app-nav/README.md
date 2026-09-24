@@ -108,7 +108,7 @@ npx react-native run-android
 
 ### `NavDrawer`
 
-`visible`, `onClose`, `items`, `activeKey`, `onSelect`, `profile?` (`{ name, subtitle?, avatar?, logo? }`), `status?` (`{ online, label?, detail?, action? }`), `onLogout?`, `logoutLabel?`, `logoutWarning?`, `footnote?`, `side?`, `variant?`, `width?` (320, capped at 86% of the screen), `topInset?`, `bottomInset?`, `theme?`.
+`visible`, `onClose`, `items`, `activeKey`, `onSelect`, `profile?` (`{ name, subtitle?, avatar?, logo? }`), `status?` (`{ online, label?, detail?, action? }`), `onLogout?`, `logoutLabel?`, `logoutWarning?`, `logoutIcon?` (render function, like item icons), `footnote?`, `side?`, `variant?`, `width?` (320, capped at 86% of the screen), `topInset?`, `bottomInset?`, `theme?`.
 
 ### `NavItem`
 

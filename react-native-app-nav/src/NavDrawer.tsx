@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { Badge, NavIcon } from './components/NavIcon';
 import { resolveTheme, type NavTheme } from './theme';
-import type { NavItem } from './types';
+import type { NavIconRender, NavItem } from './types';
 
 export interface DrawerProfile {
   name: string;
@@ -51,6 +51,8 @@ export interface NavDrawerProps<K extends string = string> {
   logoutLabel?: string;
   /** Shown while Log out is armed, e.g. "3 unsynced tickets stay on this device". */
   logoutWarning?: string;
+  /** Icon before the Log out label, e.g. a vector `logout` icon. */
+  logoutIcon?: NavIconRender;
   /** Small text at the very bottom, e.g. the app version. */
   footnote?: string;
   side?: 'left' | 'right';
@@ -86,6 +88,7 @@ export function NavDrawer<K extends string = string>({
   onLogout,
   logoutLabel = 'Log out',
   logoutWarning,
+  logoutIcon,
   footnote,
   side = 'left',
   variant = 'island',
@@ -399,7 +402,11 @@ export function NavDrawer<K extends string = string>({
                   },
                 ]}
               >
-                <Text style={[styles.logoutGlyph, { color: armed ? theme.danger : theme.onAccent }]}>⇥</Text>
+                {logoutIcon ? (
+                  logoutIcon({ color: armed ? theme.danger : theme.onAccent, size: 20, active: armed })
+                ) : (
+                  <Text style={[styles.logoutGlyph, { color: armed ? theme.danger : theme.onAccent }]}>⇥</Text>
+                )}
                 <Text style={[styles.logoutText, { color: armed ? theme.danger : theme.onAccent }]}>
                   {armed ? `Tap again to ${logoutLabel.toLowerCase()}` : logoutLabel}
                 </Text>
