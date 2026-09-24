@@ -1,4 +1,11 @@
-import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Animated,
   Easing,
@@ -67,7 +74,12 @@ export interface MultiSelectProps<V extends OptionValue = string> {
 
 type Row<V extends OptionValue> =
   | { kind: 'header'; key: string; group: string; values: V[] }
-  | { kind: 'option'; key: string; option: MultiSelectOption<V>; ranges: Range[] };
+  | {
+      kind: 'option';
+      key: string;
+      option: MultiSelectOption<V>;
+      ranges: Range[];
+    };
 
 const HEADER_HEIGHT = 44;
 const LIST_BOTTOM_PADDING = 24;
@@ -81,9 +93,12 @@ const initials = (label: string) =>
     .map(w => w[0]?.toUpperCase() ?? '')
     .join('');
 
-const sameArray = <T,>(a: T[], b: T[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+const sameArray = <T,>(a: T[], b: T[]) =>
+  a.length === b.length && a.every((x, i) => x === b[i]);
 
-export function MultiSelect<V extends OptionValue = string>(props: MultiSelectProps<V>) {
+export function MultiSelect<V extends OptionValue = string>(
+  props: MultiSelectProps<V>,
+) {
   const {
     options,
     value,
@@ -99,7 +114,10 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
   } = props;
 
   const scheme = useColorScheme();
-  const theme = useMemo(() => resolveTheme(scheme, props.theme), [scheme, props.theme]);
+  const theme = useMemo(
+    () => resolveTheme(scheme, props.theme),
+    [scheme, props.theme],
+  );
   const { height: windowHeight } = useWindowDimensions();
   const sheetHeight = Math.min(windowHeight * 0.88, 780);
 
@@ -116,14 +134,25 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
   const [painting, setPainting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; undo: V[] } | null>(null);
+  const [toast, setToast] = useState<{ message: string; undo: V[] } | null>(
+    null,
+  );
 
-  const optionByValue = useMemo(() => new Map(options.map(o => [o.value, o])), [options]);
+  const optionByValue = useMemo(
+    () => new Map(options.map(o => [o.value, o])),
+    [options],
+  );
   const selectedOptions = useMemo(
-    () => value.map(v => optionByValue.get(v)).filter((o): o is MultiSelectOption<V> => !!o),
+    () =>
+      value
+        .map(v => optionByValue.get(v))
+        .filter((o): o is MultiSelectOption<V> => !!o),
     [value, optionByValue],
   );
-  const orderOf = useMemo(() => new Map(value.map((v, i) => [v, i + 1])), [value]);
+  const orderOf = useMemo(
+    () => new Map(value.map((v, i) => [v, i + 1])),
+    [value],
+  );
 
   // ---- rows ---------------------------------------------------------------
 
@@ -143,7 +172,9 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
     const out: Row<V>[] = [];
     if (q) {
       matched = [...matched].sort((a, b) => b.score - a.score);
-      matched.forEach(m => out.push({ kind: 'option', key: `o:${m.option.value}`, ...m }));
+      matched.forEach(m =>
+        out.push({ kind: 'option', key: `o:${m.option.value}`, ...m }),
+      );
     } else {
       const groups = new Map<string, typeof matched>();
       matched.forEach(m => {
@@ -153,10 +184,14 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
       });
       groups.forEach((items, group) => {
         if (group) {
-          const values = items.filter(i => !i.option.disabled).map(i => i.option.value);
+          const values = items
+            .filter(i => !i.option.disabled)
+            .map(i => i.option.value);
           out.push({ kind: 'header', key: `h:${group}`, group, values });
         }
-        items.forEach(m => out.push({ kind: 'option', key: `o:${m.option.value}`, ...m }));
+        items.forEach(m =>
+          out.push({ kind: 'option', key: `o:${m.option.value}`, ...m }),
+        );
       });
     }
     const offs: number[] = [];
@@ -165,7 +200,12 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
       offs.push(y);
       y += r.kind === 'header' ? HEADER_HEIGHT : OPTION_ROW_HEIGHT;
     });
-    return { rows: out, offsets: offs, contentHeight: y + LIST_BOTTOM_PADDING, matchCount: matched.length };
+    return {
+      rows: out,
+      offsets: offs,
+      contentHeight: y + LIST_BOTTOM_PADDING,
+      matchCount: matched.length,
+    };
   }, [options, deferredQuery]);
 
   const layoutRef = useRef({ rows, offsets, contentHeight });
@@ -178,7 +218,11 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
     shake.setValue(0);
     Animated.sequence(
       [10, -9, 7, -5, 3, 0].map(toValue =>
-        Animated.timing(shake, { toValue, duration: 45, useNativeDriver: true }),
+        Animated.timing(shake, {
+          toValue,
+          duration: 45,
+          useNativeDriver: true,
+        }),
       ),
     ).start();
     onLimitRef.current?.();
@@ -232,7 +276,8 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
   // list auto-scrolls, so long ranges are one gesture.
 
   const listRef = useRef<FlatList<Row<V>>>(null);
-  const listWrapRef = useRef<View>(null);
+  // ComponentRef resolves to the instance type on both old (class) and new (function) RN typings.
+  const listWrapRef = useRef<React.ComponentRef<typeof View>>(null);
   const scrollY = useRef(0);
   const listTop = useRef(0);
   const viewportH = useRef(0);
@@ -255,7 +300,8 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
     const range: V[] = [];
     for (let i = p.anchor; ; i += step) {
       const r = rs[i];
-      if (r?.kind === 'option' && !r.option.disabled) range.push(r.option.value);
+      if (r?.kind === 'option' && !r.option.disabled)
+        range.push(r.option.value);
       if (i === p.current || r === undefined) break;
     }
     let next: V[];
@@ -279,7 +325,7 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
     let lo = 0;
     let hi = offs.length - 1;
     while (lo < hi) {
-      const mid = (lo + hi + 1) >> 1;
+      const mid = Math.ceil((lo + hi) / 2);
       if (offs[mid] <= y) lo = mid;
       else hi = mid - 1;
     }
@@ -307,7 +353,10 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
       else if (y > h - EDGE) speed = Math.min(1, (y - (h - EDGE)) / EDGE);
       if (speed) {
         const maxOffset = Math.max(0, layoutRef.current.contentHeight - h);
-        const next = Math.min(maxOffset, Math.max(0, scrollY.current + speed * MAX_AUTOSCROLL_SPEED));
+        const next = Math.min(
+          maxOffset,
+          Math.max(0, scrollY.current + speed * MAX_AUTOSCROLL_SPEED),
+        );
         if (next !== scrollY.current) {
           scrollY.current = next;
           listRef.current?.scrollToOffset({ offset: next, animated: false });
@@ -356,7 +405,8 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
   const onRowPressOut = useCallback(() => {
     // A long-press released without dragging: the pan responder never took
     // over, so the row is the one that has to end the paint session.
-    if (paint.current.active) setTimeout(() => !paint.current.granted && endPaint(), 0);
+    if (paint.current.active)
+      setTimeout(() => !paint.current.granted && endPaint(), 0);
   }, [endPaint]);
 
   const paintResponder = useMemo(
@@ -378,7 +428,12 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
     [endPaint, trackFinger],
   );
 
-  useEffect(() => () => void (raf.current != null && cancelAnimationFrame(raf.current)), []);
+  useEffect(
+    () => () => {
+      if (raf.current != null) cancelAnimationFrame(raf.current);
+    },
+    [],
+  );
 
   // A new query re-ranks everything; always show the best match first.
   useEffect(() => {
@@ -396,8 +451,18 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
     sheetY.setValue(sheetHeight);
     setVisible(true);
     Animated.parallel([
-      Animated.spring(sheetY, { toValue: 0, damping: 24, stiffness: 240, mass: 0.9, useNativeDriver: true }),
-      Animated.timing(caret, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.spring(sheetY, {
+        toValue: 0,
+        damping: 24,
+        stiffness: 240,
+        mass: 0.9,
+        useNativeDriver: true,
+      }),
+      Animated.timing(caret, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
     ]).start();
   }, [caret, disabled, sheetHeight, sheetY]);
 
@@ -410,7 +475,11 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
-      Animated.timing(caret, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.timing(caret, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
     ]).start(() => {
       setVisible(false);
       setQuery('');
@@ -421,11 +490,18 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
   const dragToClose = useMemo(
     () =>
       PanResponder.create({
-        onMoveShouldSetPanResponder: (_e, g) => g.dy > 4 && Math.abs(g.dy) > Math.abs(g.dx),
+        onMoveShouldSetPanResponder: (_e, g) =>
+          g.dy > 4 && Math.abs(g.dy) > Math.abs(g.dx),
         onPanResponderMove: (_e, g) => sheetY.setValue(Math.max(0, g.dy)),
         onPanResponderRelease: (_e, g) => {
           if (g.dy > 120 || g.vy > 1.1) close();
-          else Animated.spring(sheetY, { toValue: 0, damping: 20, stiffness: 260, useNativeDriver: true }).start();
+          else
+            Animated.spring(sheetY, {
+              toValue: 0,
+              damping: 20,
+              stiffness: 260,
+              useNativeDriver: true,
+            }).start();
         },
       }),
     [close, sheetY],
@@ -437,7 +513,12 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
   useEffect(() => {
     if (!toast) return;
     toastAnim.setValue(0);
-    Animated.spring(toastAnim, { toValue: 1, damping: 18, stiffness: 220, useNativeDriver: true }).start();
+    Animated.spring(toastAnim, {
+      toValue: 1,
+      damping: 18,
+      stiffness: 220,
+      useNativeDriver: true,
+    }).start();
     const t = setTimeout(() => setToast(null), 4000);
     return () => clearTimeout(t);
   }, [toast, toastAnim]);
@@ -450,26 +531,38 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
 
   // ---- tray ---------------------------------------------------------------
 
-  const trayRef = useRef<ScrollView>(null);
+  const trayRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const prevCount = useRef(value.length);
   const onTrayContentChange = () => {
-    if (value.length > prevCount.current) trayRef.current?.scrollToEnd({ animated: true });
+    if (value.length > prevCount.current)
+      trayRef.current?.scrollToEnd({ animated: true });
     prevCount.current = value.length;
   };
 
   const reveal = (v: V) => {
     const i = rows.findIndex(r => r.kind === 'option' && r.option.value === v);
-    if (i >= 0) listRef.current?.scrollToOffset({ offset: Math.max(0, offsets[i] - OPTION_ROW_HEIGHT), animated: true });
+    if (i >= 0)
+      listRef.current?.scrollToOffset({
+        offset: Math.max(0, offsets[i] - OPTION_ROW_HEIGHT),
+        animated: true,
+      });
   };
 
   // ---- render -------------------------------------------------------------
 
   const q = query.trim();
-  const optionRows = rows.filter((r): r is Extract<Row<V>, { kind: 'option' }> => r.kind === 'option');
-  const matchValues = optionRows.filter(r => !r.option.disabled).map(r => r.option.value);
-  const allMatchesSelected = matchValues.length > 0 && matchValues.every(v => orderOf.has(v));
+  const optionRows = rows.filter(
+    (r): r is Extract<Row<V>, { kind: 'option' }> => r.kind === 'option',
+  );
+  const matchValues = optionRows
+    .filter(r => !r.option.disabled)
+    .map(r => r.option.value);
+  const allMatchesSelected =
+    matchValues.length > 0 && matchValues.every(v => orderOf.has(v));
   const canCreate =
-    !!onCreateOption && !!q && !options.some(o => o.label.toLowerCase() === q.toLowerCase());
+    !!onCreateOption &&
+    !!q &&
+    !options.some(o => o.label.toLowerCase() === q.toLowerCase());
 
   const renderRow = ({ item, index }: ListRenderItemInfo<Row<V>>) => {
     if (item.kind === 'header') {
@@ -477,13 +570,18 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
       const all = picked === item.values.length && picked > 0;
       return (
         <View style={[styles.header, { backgroundColor: theme.surface }]}>
-          <Text style={[styles.headerText, { color: theme.textFaint }]}>{item.group.toUpperCase()}</Text>
+          <Text style={[styles.headerText, { color: theme.textFaint }]}>
+            {item.group.toUpperCase()}
+          </Text>
           <Pressable
             hitSlop={10}
             onPress={() => setMany(item.values)}
             accessibilityRole="button"
-            accessibilityLabel={`${all ? 'Deselect' : 'Select'} all in ${item.group}`}
-            style={styles.headerAction}>
+            accessibilityLabel={`${all ? 'Deselect' : 'Select'} all in ${
+              item.group
+            }`}
+            style={styles.headerAction}
+          >
             {picked > 0 && (
               <Text style={[styles.headerCount, { color: theme.accent }]}>
                 {picked}/{item.values.length}
@@ -519,7 +617,8 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
     );
   };
 
-  const counterText = max != null ? `${value.length} / ${max}` : `${value.length} selected`;
+  const counterText =
+    max != null ? `${value.length} / ${max}` : `${value.length} selected`;
   const atLimit = max != null && value.length >= max;
 
   return (
@@ -529,12 +628,21 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
         onPress={open}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={`${label ?? title}: ${selectedOptions.length ? selectedOptions.map(o => o.label).join(', ') : placeholder}`}
+        accessibilityLabel={`${label ?? title}: ${
+          selectedOptions.length
+            ? selectedOptions.map(o => o.label).join(', ')
+            : placeholder
+        }`}
         // The inline × buttons are unreachable inside an accessible parent, so
         // screen readers get them as custom actions instead.
-        accessibilityActions={selectedOptions.map(o => ({ name: `remove:${o.value}`, label: `Remove ${o.label}` }))}
+        accessibilityActions={selectedOptions.map(o => ({
+          name: `remove:${o.value}`,
+          label: `Remove ${o.label}`,
+        }))}
         onAccessibilityAction={e => {
-          const o = selectedOptions.find(x => `remove:${x.value}` === e.nativeEvent.actionName);
+          const o = selectedOptions.find(
+            x => `remove:${x.value}` === e.nativeEvent.actionName,
+          );
           if (o) toggleValue(o.value);
         }}
         style={({ pressed }) => [
@@ -546,31 +654,51 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
             opacity: disabled ? 0.5 : 1,
             transform: [{ scale: pressed ? 0.985 : 1 }],
           },
-        ]}>
-        {label ? <Text style={[styles.triggerLabel, { color: theme.textMuted }]}>{label}</Text> : null}
+        ]}
+      >
+        {label ? (
+          <Text style={[styles.triggerLabel, { color: theme.textMuted }]}>
+            {label}
+          </Text>
+        ) : null}
         <View style={styles.triggerBody}>
           <View style={styles.triggerChips}>
             {selectedOptions.length === 0 ? (
-              <Text style={[styles.placeholder, { color: theme.textFaint }]}>{placeholder}</Text>
+              <Text style={[styles.placeholder, { color: theme.textFaint }]}>
+                {placeholder}
+              </Text>
             ) : (
               <>
                 {selectedOptions.slice(0, maxTriggerChips).map(o => (
-                  <View key={String(o.value)} style={[styles.chip, { backgroundColor: theme.accentSoft }]}>
-                    <Text style={styles.chipIcon}>{o.icon ?? initials(o.label)}</Text>
-                    <Text numberOfLines={1} style={[styles.chipText, { color: theme.text }]}>
+                  <View
+                    key={String(o.value)}
+                    style={[styles.chip, { backgroundColor: theme.accentSoft }]}
+                  >
+                    <Text style={styles.chipIcon}>
+                      {o.icon ?? initials(o.label)}
+                    </Text>
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.chipText, { color: theme.text }]}
+                    >
                       {o.label}
                     </Text>
                     <Pressable
                       hitSlop={8}
                       onPress={() => toggleValue(o.value)}
                       accessibilityRole="button"
-                      accessibilityLabel={`Remove ${o.label}`}>
-                      <Text style={[styles.chipX, { color: theme.textMuted }]}>×</Text>
+                      accessibilityLabel={`Remove ${o.label}`}
+                    >
+                      <Text style={[styles.chipX, { color: theme.textMuted }]}>
+                        ×
+                      </Text>
                     </Pressable>
                   </View>
                 ))}
                 {selectedOptions.length > maxTriggerChips && (
-                  <View style={[styles.more, { backgroundColor: theme.accent }]}>
+                  <View
+                    style={[styles.more, { backgroundColor: theme.accent }]}
+                  >
                     <Text style={[styles.moreText, { color: theme.onAccent }]}>
                       +{selectedOptions.length - maxTriggerChips}
                     </Text>
@@ -584,25 +712,48 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
               styles.caret,
               {
                 color: theme.textMuted,
-                transform: [{ rotate: caret.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }],
+                transform: [
+                  {
+                    rotate: caret.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '180deg'],
+                    }),
+                  },
+                ],
               },
-            ]}>
+            ]}
+          >
             ⌄
           </Animated.Text>
         </View>
       </Pressable>
 
       {/* ---------- sheet ---------- */}
-      <Modal visible={visible} transparent animationType="none" onRequestClose={close} statusBarTranslucent>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="none"
+        onRequestClose={close}
+        statusBarTranslucent
+      >
         <Animated.View
           style={[
             StyleSheet.absoluteFill,
             {
               backgroundColor: theme.backdrop,
-              opacity: sheetY.interpolate({ inputRange: [0, sheetHeight], outputRange: [1, 0], extrapolate: 'clamp' }),
+              opacity: sheetY.interpolate({
+                inputRange: [0, sheetHeight],
+                outputRange: [1, 0],
+                extrapolate: 'clamp',
+              }),
             },
-          ]}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close" />
+          ]}
+        >
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={close}
+            accessibilityLabel="Close"
+          />
         </Animated.View>
 
         <Animated.View
@@ -613,28 +764,56 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
               backgroundColor: theme.surface,
               transform: [{ translateY: sheetY }],
             },
-          ]}>
-          <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          ]}
+        >
+          <KeyboardAvoidingView
+            style={styles.flex}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
             <View {...dragToClose.panHandlers}>
-              <View style={[styles.grabber, { backgroundColor: theme.border }]} />
+              <View
+                style={[styles.grabber, { backgroundColor: theme.border }]}
+              />
               <View style={styles.titleRow}>
-                <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
+                <Text style={[styles.title, { color: theme.text }]}>
+                  {title}
+                </Text>
                 <Animated.View
                   style={[
                     styles.counter,
-                    { backgroundColor: atLimit ? theme.accent : theme.surfaceAlt, transform: [{ translateX: shake }] },
-                  ]}>
-                  <Text style={[styles.counterText, { color: atLimit ? theme.onAccent : theme.textMuted }]}>
+                    {
+                      backgroundColor: atLimit
+                        ? theme.accent
+                        : theme.surfaceAlt,
+                      transform: [{ translateX: shake }],
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.counterText,
+                      { color: atLimit ? theme.onAccent : theme.textMuted },
+                    ]}
+                  >
                     {counterText}
                   </Text>
                   {max != null && (
-                    <View style={[styles.meter, { backgroundColor: theme.border }]}>
+                    <View
+                      style={[styles.meter, { backgroundColor: theme.border }]}
+                    >
                       <View
-                        style={{
-                          width: `${Math.min(100, (value.length / max) * 100)}%`,
-                          height: '100%',
-                          backgroundColor: atLimit ? theme.onAccent : theme.accent,
-                        }}
+                        style={[
+                          styles.meterFill,
+                          {
+                            width: `${Math.min(
+                              100,
+                              (value.length / max) * 100,
+                            )}%`,
+                            backgroundColor: atLimit
+                              ? theme.onAccent
+                              : theme.accent,
+                          },
+                        ]}
                       />
                     </View>
                   )}
@@ -642,8 +821,12 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
               </View>
             </View>
 
-            <View style={[styles.search, { backgroundColor: theme.surfaceAlt }]}>
-              <Text style={[styles.searchIcon, { color: theme.textFaint }]}>⌕</Text>
+            <View
+              style={[styles.search, { backgroundColor: theme.surfaceAlt }]}
+            >
+              <Text style={[styles.searchIcon, { color: theme.textFaint }]}>
+                ⌕
+              </Text>
               <TextInput
                 value={query}
                 onChangeText={setQuery}
@@ -656,8 +839,16 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
                 accessibilityLabel="Search options"
               />
               {query ? (
-                <Pressable hitSlop={10} onPress={() => setQuery('')} accessibilityLabel="Clear search">
-                  <Text style={[styles.searchClear, { color: theme.textMuted }]}>×</Text>
+                <Pressable
+                  hitSlop={10}
+                  onPress={() => setQuery('')}
+                  accessibilityLabel="Clear search"
+                >
+                  <Text
+                    style={[styles.searchClear, { color: theme.textMuted }]}
+                  >
+                    ×
+                  </Text>
                 </Pressable>
               ) : null}
             </View>
@@ -670,32 +861,66 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
               style={styles.tray}
               contentContainerStyle={styles.trayContent}
               onContentSizeChange={onTrayContentChange}
-              keyboardShouldPersistTaps="handled">
+              keyboardShouldPersistTaps="handled"
+            >
               {selectedOptions.length === 0 ? (
                 <Text style={[styles.trayEmpty, { color: theme.textFaint }]}>
-                  Nothing picked yet: tap a row, or hold and drag to pick several
+                  Nothing picked yet: tap a row, or hold and drag to pick
+                  several
                 </Text>
               ) : (
                 selectedOptions.map((o, i) => (
                   <Pressable
                     key={String(o.value)}
                     onPress={() => reveal(o.value)}
-                    accessibilityLabel={`${o.label}, pick ${i + 1}. Tap to show in list`}
-                    accessibilityActions={[{ name: 'remove', label: `Remove ${o.label}` }]}
-                    onAccessibilityAction={e => e.nativeEvent.actionName === 'remove' && toggleValue(o.value)}
-                    style={[styles.trayChip, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-                    <View style={[styles.trayOrder, { backgroundColor: theme.accent }]}>
-                      <Text style={[styles.trayOrderText, { color: theme.onAccent }]}>{i + 1}</Text>
+                    accessibilityLabel={`${o.label}, pick ${
+                      i + 1
+                    }. Tap to show in list`}
+                    accessibilityActions={[
+                      { name: 'remove', label: `Remove ${o.label}` },
+                    ]}
+                    onAccessibilityAction={e =>
+                      e.nativeEvent.actionName === 'remove' &&
+                      toggleValue(o.value)
+                    }
+                    style={[
+                      styles.trayChip,
+                      {
+                        borderColor: theme.border,
+                        backgroundColor: theme.surface,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.trayOrder,
+                        { backgroundColor: theme.accent },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.trayOrderText,
+                          { color: theme.onAccent },
+                        ]}
+                      >
+                        {i + 1}
+                      </Text>
                     </View>
-                    <Text numberOfLines={1} style={[styles.chipText, { color: theme.text }]}>
+                    <Text
+                      numberOfLines={1}
+                      style={[styles.chipText, { color: theme.text }]}
+                    >
                       {o.label}
                     </Text>
                     <Pressable
                       hitSlop={8}
                       onPress={() => toggleValue(o.value)}
                       accessibilityRole="button"
-                      accessibilityLabel={`Remove ${o.label}`}>
-                      <Text style={[styles.chipX, { color: theme.textMuted }]}>×</Text>
+                      accessibilityLabel={`Remove ${o.label}`}
+                    >
+                      <Text style={[styles.chipX, { color: theme.textMuted }]}>
+                        ×
+                      </Text>
                     </Pressable>
                   </Pressable>
                 ))
@@ -713,18 +938,31 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
                       onPress={() => {
                         const created = onCreateOption!(q);
                         if (created) {
-                          const [next, ok] = addValues(valueRef.current, [created.value]);
+                          const [next, ok] = addValues(valueRef.current, [
+                            created.value,
+                          ]);
                           if (ok) commit(next);
                           else signalLimit();
                         }
                         setQuery('');
                       }}
-                      style={[styles.pill, { backgroundColor: theme.accent }]}>
-                      <Text style={[styles.pillText, { color: theme.onAccent }]}>+ Create “{q}”</Text>
+                      style={[styles.pill, { backgroundColor: theme.accent }]}
+                    >
+                      <Text
+                        style={[styles.pillText, { color: theme.onAccent }]}
+                      >
+                        + Create “{q}”
+                      </Text>
                     </Pressable>
                   )}
                   {matchValues.length > 0 && (
-                    <Pressable onPress={() => setMany(matchValues)} style={[styles.pill, { backgroundColor: theme.accentSoft }]}>
+                    <Pressable
+                      onPress={() => setMany(matchValues)}
+                      style={[
+                        styles.pill,
+                        { backgroundColor: theme.accentSoft },
+                      ]}
+                    >
                       <Text style={[styles.pillText, { color: theme.accent }]}>
                         {allMatchesSelected ? 'Deselect all' : 'Select all'}
                       </Text>
@@ -739,7 +977,8 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
               style={styles.flex}
               collapsable={false}
               onLayout={e => (viewportH.current = e.nativeEvent.layout.height)}
-              {...paintResponder.panHandlers}>
+              {...paintResponder.panHandlers}
+            >
               <FlatList
                 ref={listRef}
                 data={rows}
@@ -749,7 +988,10 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
                 getItemLayout={(_d, index) => ({
                   index,
                   offset: offsets[index] ?? 0,
-                  length: rows[index]?.kind === 'header' ? HEADER_HEIGHT : OPTION_ROW_HEIGHT,
+                  length:
+                    rows[index]?.kind === 'header'
+                      ? HEADER_HEIGHT
+                      : OPTION_ROW_HEIGHT,
                 })}
                 scrollEnabled={!painting}
                 keyboardShouldPersistTaps="handled"
@@ -762,9 +1004,14 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
                 contentContainerStyle={{ paddingBottom: LIST_BOTTOM_PADDING }}
                 ListEmptyComponent={
                   <View style={styles.empty}>
-                    <Text style={[styles.emptyTitle, { color: theme.text }]}>No matches</Text>
-                    <Text style={[styles.emptyBody, { color: theme.textMuted }]}>
-                      Nothing matches “{q}”.{onCreateOption ? ' Create it above.' : ''}
+                    <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                      No matches
+                    </Text>
+                    <Text
+                      style={[styles.emptyBody, { color: theme.textMuted }]}
+                    >
+                      Nothing matches “{q}”.
+                      {onCreateOption ? ' Create it above.' : ''}
                     </Text>
                   </View>
                 }
@@ -778,18 +1025,31 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
                   {
                     backgroundColor: theme.text,
                     opacity: toastAnim,
-                    transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }],
+                    transform: [
+                      {
+                        translateY: toastAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [20, 0],
+                        }),
+                      },
+                    ],
                   },
-                ]}>
-                <Text style={[styles.toastText, { color: theme.surface }]}>{toast.message}</Text>
+                ]}
+              >
+                <Text style={[styles.toastText, { color: theme.surface }]}>
+                  {toast.message}
+                </Text>
                 <Pressable
                   hitSlop={10}
                   onPress={() => {
                     commit(toast.undo);
                     setToast(null);
                   }}
-                  accessibilityRole="button">
-                  <Text style={[styles.toastAction, { color: theme.accent }]}>UNDO</Text>
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.toastAction, { color: theme.accent }]}>
+                    UNDO
+                  </Text>
                 </Pressable>
               </Animated.View>
             )}
@@ -798,17 +1058,24 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
               <Pressable
                 onPress={clearAll}
                 disabled={!value.length}
-                style={[styles.secondary, { opacity: value.length ? 1 : 0.35 }]}
-                accessibilityRole="button">
-                <Text style={[styles.secondaryText, { color: theme.text }]}>Clear</Text>
+                style={[styles.secondary, !value.length && styles.dimmed]}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.secondaryText, { color: theme.text }]}>
+                  Clear
+                </Text>
               </Pressable>
               <Pressable
                 onPress={close}
                 accessibilityRole="button"
                 style={({ pressed }) => [
                   styles.primary,
-                  { backgroundColor: theme.text, transform: [{ scale: pressed ? 0.97 : 1 }] },
-                ]}>
+                  {
+                    backgroundColor: theme.text,
+                    transform: [{ scale: pressed ? 0.97 : 1 }],
+                  },
+                ]}
+              >
                 <Text style={[styles.primaryText, { color: theme.surface }]}>
                   {value.length ? `Done · ${value.length}` : 'Done'}
                 </Text>
@@ -823,10 +1090,26 @@ export function MultiSelect<V extends OptionValue = string>(props: MultiSelectPr
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  trigger: { borderWidth: 1.5, paddingHorizontal: 16, paddingVertical: 12, minHeight: 60 },
-  triggerLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 0.3, marginBottom: 6 },
+  trigger: {
+    borderWidth: 1.5,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 60,
+  },
+  triggerLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+    marginBottom: 6,
+  },
   triggerBody: { flexDirection: 'row', alignItems: 'center' },
-  triggerChips: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, overflow: 'hidden' },
+  triggerChips: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    overflow: 'hidden',
+  },
   placeholder: { fontSize: 16 },
   chip: {
     flexDirection: 'row',
@@ -842,7 +1125,14 @@ const styles = StyleSheet.create({
   chipIcon: { fontSize: 13 },
   chipText: { fontSize: 14, fontWeight: '600', flexShrink: 1 },
   chipX: { fontSize: 18, lineHeight: 20, fontWeight: '500' },
-  more: { height: 30, minWidth: 34, borderRadius: 15, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  more: {
+    height: 30,
+    minWidth: 34,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
   moreText: { fontSize: 13, fontWeight: '800' },
   caret: { fontSize: 20, marginLeft: 8, lineHeight: 22 },
 
@@ -855,7 +1145,13 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     overflow: 'hidden',
   },
-  grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, marginTop: 10 },
+  grabber: {
+    alignSelf: 'center',
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    marginTop: 10,
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -865,9 +1161,26 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   title: { fontSize: 24, fontWeight: '800', letterSpacing: -0.6 },
-  counter: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6, alignItems: 'center', minWidth: 64 },
-  counterText: { fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  meter: { height: 3, width: '100%', borderRadius: 2, marginTop: 4, overflow: 'hidden' },
+  counter: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignItems: 'center',
+    minWidth: 64,
+  },
+  counterText: {
+    fontSize: 13,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  meter: {
+    height: 3,
+    width: '100%',
+    borderRadius: 2,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  meterFill: { height: '100%' },
 
   search: {
     flexDirection: 'row',
@@ -895,7 +1208,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     maxWidth: 180,
   },
-  trayOrder: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  trayOrder: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   trayOrderText: { fontSize: 12, fontWeight: '800' },
 
   actions: {
@@ -909,7 +1228,13 @@ const styles = StyleSheet.create({
   },
   actionsMeta: { fontSize: 13, fontWeight: '600' },
   actionsRight: { flexDirection: 'row', gap: 8, flexShrink: 1 },
-  pill: { borderRadius: 14, paddingHorizontal: 12, height: 30, justifyContent: 'center', flexShrink: 1 },
+  pill: {
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    height: 30,
+    justifyContent: 'center',
+    flexShrink: 1,
+  },
   pillText: { fontSize: 13, fontWeight: '700' },
 
   header: {
@@ -922,7 +1247,11 @@ const styles = StyleSheet.create({
   },
   headerText: { fontSize: 12, fontWeight: '800', letterSpacing: 1.2 },
   headerAction: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerCount: { fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  headerCount: {
+    fontSize: 12,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+  },
   headerActionText: { fontSize: 13, fontWeight: '700' },
 
   empty: { alignItems: 'center', paddingTop: 48, paddingHorizontal: 32 },
@@ -954,7 +1283,14 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   secondary: { height: 52, paddingHorizontal: 20, justifyContent: 'center' },
+  dimmed: { opacity: 0.35 },
   secondaryText: { fontSize: 16, fontWeight: '700' },
-  primary: { flex: 1, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  primary: {
+    flex: 1,
+    height: 52,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   primaryText: { fontSize: 16, fontWeight: '800', letterSpacing: -0.2 },
 });

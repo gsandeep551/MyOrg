@@ -22,6 +22,20 @@ Pure React Native (`Animated`, `PanResponder`, `FlatList`, `Modal`). No Expo, no
 
 Also included: a spring-driven sheet you can drag down to dismiss, a backdrop that fades with the drag, light and dark themes that follow the system, a themeable accent, keyboard avoidance, and screen reader support (checkbox roles and states, hints, and custom "Remove X" actions).
 
+## Run the demo on a phone
+
+From this folder, run:
+
+```sh
+./scripts/create-demo-app.sh            # creates ../MultiSelectDemo (bare React Native, no Expo)
+cd ../MultiSelectDemo
+npx react-native run-android            # Android device (USB debugging on) or emulator
+# macOS only:
+(cd ios && bundle install && bundle exec pod install) && npx react-native run-ios
+```
+
+The script creates a new app with the React Native CLI, copies `src/` into it, and sets `example/App.tsx` as its home screen. You need the standard React Native environment for your platform (Node, JDK 17 and the Android SDK, or Xcode). See the React Native docs under "Set up your environment".
+
 ## Usage
 
 ```tsx
@@ -72,7 +86,7 @@ See [`example/App.tsx`](example/App.tsx) for a full screen that includes a creat
 
 ## Notes
 
-- **Requirements:** React 18+ and React Native 0.72+ (uses `gap`, `userSelect` and `useDeferredValue`).
+- **Requirements:** React 18+ and React Native 0.72+ (uses `gap`, `userSelect` and `useDeferredValue`). Type-checked against React Native 0.81 and 0.87, and bundles with Metro for Android and iOS. The example also uses `react-native-safe-area-context`, which new React Native apps already include; the component itself has no dependencies.
 - **Performance:** rows have fixed heights (`getItemLayout`), all animations use the native driver, and filtering runs on a deferred query so typing stays responsive.
 - **Paint gesture:** implemented with the core responder system. The list stops scrolling while a paint is in progress and resumes when you lift your finger.
 

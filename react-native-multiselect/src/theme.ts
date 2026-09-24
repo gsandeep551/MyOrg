@@ -49,7 +49,7 @@ export const darkTheme: MultiSelectTheme = {
 };
 
 export function resolveTheme(
-  scheme: ColorSchemeName,
+  scheme: ColorSchemeName | null | undefined,
   overrides?: Partial<MultiSelectTheme>,
 ): MultiSelectTheme {
   const base = scheme === 'dark' ? darkTheme : lightTheme;

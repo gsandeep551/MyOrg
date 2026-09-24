@@ -23,12 +23,27 @@ interface Props {
   onPressOut: () => void;
 }
 
-export const OptionRow = memo(function OptionRow(props: Props) {
-  const { index, label, description, glyph, tint, ranges, selected, order, disabled, theme } = props;
+export const OptionRow = memo(function OptionRowImpl(props: Props) {
+  const {
+    index,
+    label,
+    description,
+    glyph,
+    tint,
+    ranges,
+    selected,
+    order,
+    disabled,
+    theme,
+  } = props;
   const wash = useRef(new Animated.Value(selected ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.timing(wash, { toValue: selected ? 1 : 0, duration: 180, useNativeDriver: true }).start();
+    Animated.timing(wash, {
+      toValue: selected ? 1 : 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
   }, [selected, wash]);
 
   return (
@@ -42,28 +57,51 @@ export const OptionRow = memo(function OptionRow(props: Props) {
       accessibilityState={{ checked: selected, disabled }}
       accessibilityLabel={description ? `${label}, ${description}` : label}
       accessibilityHint="Long-press and drag to select several at once"
-      style={({ pressed }) => [styles.row, { opacity: disabled ? 0.4 : pressed ? 0.85 : 1 }]}>
+      style={({ pressed }) => [
+        styles.row,
+        { opacity: disabled ? 0.4 : pressed ? 0.85 : 1 },
+      ]}
+    >
       <Animated.View
         pointerEvents="none"
-        style={[StyleSheet.absoluteFill, { backgroundColor: theme.accentSoft, opacity: wash }]}
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: theme.accentSoft, opacity: wash },
+        ]}
       />
       <Animated.View
         pointerEvents="none"
         style={[
           styles.rail,
-          { backgroundColor: theme.accent, opacity: wash, transform: [{ scaleY: wash }] },
+          {
+            backgroundColor: theme.accent,
+            opacity: wash,
+            transform: [{ scaleY: wash }],
+          },
         ]}
       />
-      <SelectionTile selected={selected} order={order} glyph={glyph} tint={tint} theme={theme} />
+      <SelectionTile
+        selected={selected}
+        order={order}
+        glyph={glyph}
+        tint={tint}
+        theme={theme}
+      />
       <View style={styles.text}>
         <Highlight
           text={label}
           ranges={ranges}
           style={[styles.label, { color: theme.text }]}
-          highlightStyle={{ backgroundColor: theme.highlight, color: theme.accent }}
+          highlightStyle={{
+            backgroundColor: theme.highlight,
+            color: theme.accent,
+          }}
         />
         {description ? (
-          <Text numberOfLines={1} style={[styles.description, { color: theme.textMuted }]}>
+          <Text
+            numberOfLines={1}
+            style={[styles.description, { color: theme.textMuted }]}
+          >
             {description}
           </Text>
         ) : null}

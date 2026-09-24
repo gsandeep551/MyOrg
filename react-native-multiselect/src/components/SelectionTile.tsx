@@ -16,7 +16,14 @@ interface Props {
  * The leading tile flips from the option's glyph into a filled badge that shows
  * the order it was picked in, so selection *and* priority are readable at a glance.
  */
-export function SelectionTile({ selected, order, glyph, tint, theme, size = 40 }: Props) {
+export function SelectionTile({
+  selected,
+  order,
+  glyph,
+  tint,
+  theme,
+  size = 40,
+}: Props) {
   const progress = useRef(new Animated.Value(selected ? 1 : 0)).current;
 
   useEffect(() => {
@@ -29,17 +36,45 @@ export function SelectionTile({ selected, order, glyph, tint, theme, size = 40 }
   }, [selected, progress]);
 
   const glyphStyle = {
-    opacity: progress.interpolate({ inputRange: [0, 0.5], outputRange: [1, 0], extrapolate: 'clamp' }),
+    opacity: progress.interpolate({
+      inputRange: [0, 0.5],
+      outputRange: [1, 0],
+      extrapolate: 'clamp',
+    }),
     transform: [
-      { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [1, 0.5] }) },
-      { rotate: progress.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '90deg'] }) },
+      {
+        scale: progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 0.5],
+        }),
+      },
+      {
+        rotate: progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: ['0deg', '90deg'],
+        }),
+      },
     ],
   };
   const badgeStyle = {
-    opacity: progress.interpolate({ inputRange: [0.3, 1], outputRange: [0, 1], extrapolate: 'clamp' }),
+    opacity: progress.interpolate({
+      inputRange: [0.3, 1],
+      outputRange: [0, 1],
+      extrapolate: 'clamp',
+    }),
     transform: [
-      { scale: progress.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] }) },
-      { rotate: progress.interpolate({ inputRange: [0, 1], outputRange: ['-90deg', '0deg'] }) },
+      {
+        scale: progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0.4, 1],
+        }),
+      },
+      {
+        rotate: progress.interpolate({
+          inputRange: [0, 1],
+          outputRange: ['-90deg', '0deg'],
+        }),
+      },
     ],
   };
   const radius = size * 0.34;
@@ -51,12 +86,27 @@ export function SelectionTile({ selected, order, glyph, tint, theme, size = 40 }
           styles.fill,
           { borderRadius: radius, backgroundColor: tint ?? theme.surfaceAlt },
           glyphStyle,
-        ]}>
-        <Text style={[styles.glyph, { fontSize: size * 0.45, color: theme.text }]}>{glyph}</Text>
+        ]}
+      >
+        <Text
+          style={[styles.glyph, { fontSize: size * 0.45, color: theme.text }]}
+        >
+          {glyph}
+        </Text>
       </Animated.View>
       <Animated.View
-        style={[styles.fill, { borderRadius: radius, backgroundColor: theme.accent }, badgeStyle]}>
-        <Text style={[styles.order, { color: theme.onAccent, fontSize: size * 0.4 }]}>
+        style={[
+          styles.fill,
+          { borderRadius: radius, backgroundColor: theme.accent },
+          badgeStyle,
+        ]}
+      >
+        <Text
+          style={[
+            styles.order,
+            { color: theme.onAccent, fontSize: size * 0.4 },
+          ]}
+        >
           {order ?? '✓'}
         </Text>
       </Animated.View>
@@ -66,7 +116,11 @@ export function SelectionTile({ selected, order, glyph, tint, theme, size = 40 }
 
 const styles = StyleSheet.create({
   fill: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },

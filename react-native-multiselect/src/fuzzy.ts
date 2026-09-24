@@ -8,7 +8,8 @@ export interface FuzzyResult {
 
 const BOUNDARY = /[\s\-_/.&]/;
 
-const isBoundary = (text: string, i: number) => i === 0 || BOUNDARY.test(text[i - 1]);
+const isBoundary = (text: string, i: number) =>
+  i === 0 || BOUNDARY.test(text[i - 1]);
 
 /**
  * Lightweight fuzzy matcher. Contiguous substrings win, word-boundary hits get a
@@ -21,7 +22,8 @@ export function fuzzyMatch(query: string, text: string): FuzzyResult | null {
 
   const idx = t.indexOf(q);
   if (idx !== -1) {
-    const score = 1000 - idx - (t.length - q.length) + (isBoundary(t, idx) ? 500 : 0);
+    const score =
+      1000 - idx - (t.length - q.length) + (isBoundary(t, idx) ? 500 : 0);
     return { score, ranges: [[idx, idx + q.length]] };
   }
 
