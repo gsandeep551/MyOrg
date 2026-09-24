@@ -79,7 +79,7 @@ Icons can be any element, e.g. `icon: <Icon name="content-copy" size={20} color=
 
 ### Sending queued tickets
 
-`SendQueueSheet` sends records saved on the device. Checkboxes let the user pick which ones to send (all ticked by default; with one ticket there's no checkbox). Items go one by one, and each row shows Sending, ✓ Sent, or a red error with its own Retry. The single yellow button always says what it does: *Send 3 tickets*, *Send 2 selected*, *Retry 1 failed*, then *Done*. Offline, it's disabled and a banner explains that tickets send when the connection is back. When everything is sent the header turns green and the sheet closes itself.
+`SendQueueSheet` sends records saved on the device, one at a time from a row's small **Send** button or all at once with the main button. Each row shows Sending, ✓ Sent, or a red error with its own Retry. The single solid-yellow button always says what it does: *Send ticket*, *Send all 3 tickets*, *Retry 1 failed*, then *Done*; row buttons are soft yellow so the main action stays obvious. With one ticket there are no row buttons. Offline, sending is disabled and a banner explains that tickets send when the connection is back. When everything is sent the header turns green and the sheet closes itself.
 
 ```tsx
 <SendQueueSheet

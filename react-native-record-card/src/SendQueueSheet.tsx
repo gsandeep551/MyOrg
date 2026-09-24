@@ -79,9 +79,9 @@ const GLYPHS: Record<QueueIconName, string> = {
 };
 
 /**
- * A bottom sheet for sending locally saved records to the server: pick
- * which ones, send them one by one with per-row progress, retry failures,
- * and wait politely while offline.
+ * A bottom sheet for sending locally saved records to the server: send
+ * one from its row or all at once, with per-row progress, retry for
+ * failures, and a clear offline state.
  */
 export function SendQueueSheet({
   visible,
@@ -111,7 +111,6 @@ export function SendQueueSheet({
   const word = (n: number) => (n === 1 ? noun[0] : noun[1]);
 
   const [states, setStates] = useState<Record<string, ItemState>>({});
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(items.map(i => i.id)));
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState({ done: 0, of: 0 });
   const [mounted, setMounted] = useState(visible);
@@ -120,21 +119,6 @@ export function SendQueueSheet({
 
   const sheetY = useRef(new Animated.Value(windowHeight)).current;
   const bar = useRef(new Animated.Value(0)).current;
-
-  // New items are selected by default; items that left the queue are forgotten.
-  const known = useRef(new Set(items.map(i => i.id)));
-  const ids = items.map(i => i.id).join('|');
-  useEffect(() => {
-    setSelected(prev => {
-      const next = new Set<string>();
-      items.forEach(i => {
-        if (prev.has(i.id) || !known.current.has(i.id)) next.add(i.id);
-      });
-      return next;
-    });
-    known.current = new Set(items.map(i => i.id));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ids]);
 
   useEffect(() => {
     if (visible) {
@@ -173,9 +157,29 @@ export function SendQueueSheet({
   const pending = items.filter(i => stateOf(i.id).status !== 'sent');
   const failed = items.filter(i => stateOf(i.id).status === 'failed');
   const allSent = items.length > 0 && pending.length === 0;
-  const targets = pending.filter(i => !many || selected.has(i.id));
+  // Pending items not already on their way.
+  const queued = pending.filter(i => stateOf(i.id).status !== 'sending');
 
-  const run = useCallback(
+  const sendOne = useCallback(
+    async (id: string) => {
+      setStates(s => ({ ...s, [id]: { status: 'sending' } }));
+      try {
+        await send(id);
+        setStates(s => ({ ...s, [id]: { status: 'sent' } }));
+        return true;
+      } catch (e) {
+        setStates(s => ({
+          ...s,
+          [id]: { status: 'failed', error: e instanceof Error && e.message ? e.message : 'Couldn’t send' },
+        }));
+        return false;
+      }
+    },
+    [send],
+  );
+
+  /** Sends `list` one after another, with progress on the main button. */
+  const sendAll = useCallback(
     async (list: QueueItem[]) => {
       if (!list.length || running) return;
       setRunning(true);
@@ -185,18 +189,7 @@ export function SendQueueSheet({
       const bad: string[] = [];
       for (let n = 0; n < list.length; n++) {
         const { id } = list[n];
-        setStates(s => ({ ...s, [id]: { status: 'sending' } }));
-        try {
-          await send(id);
-          sent.push(id);
-          setStates(s => ({ ...s, [id]: { status: 'sent' } }));
-        } catch (e) {
-          bad.push(id);
-          setStates(s => ({
-            ...s,
-            [id]: { status: 'failed', error: e instanceof Error && e.message ? e.message : 'Couldn’t send' },
-          }));
-        }
+        ((await sendOne(id)) ? sent : bad).push(id);
         setProgress({ done: n + 1, of: list.length });
         Animated.timing(bar, {
           toValue: (n + 1) / list.length,
@@ -208,8 +201,15 @@ export function SendQueueSheet({
       setRunning(false);
       onDone?.({ sent, failed: bad });
     },
-    [bar, onDone, running, send],
+    [bar, onDone, running, sendOne],
   );
+
+  /** Sends one row on its own; other rows stay available. */
+  const sendSingle = async (item: QueueItem) => {
+    if (running || !online) return;
+    const ok = await sendOne(item.id);
+    onDone?.({ sent: ok ? [item.id] : [], failed: ok ? [] : [item.id] });
+  };
 
   useEffect(() => {
     if (!allSent || !autoCloseMs || !visible) return;
@@ -228,16 +228,6 @@ export function SendQueueSheet({
       </Text>
     );
 
-  const allSelected = targets.length === pending.length;
-  const toggleAll = () =>
-    setSelected(allSelected ? new Set() : new Set(pending.map(i => i.id)));
-  const toggle = (id: string) =>
-    setSelected(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-
   // ---- header copy ---------------------------------------------------------
   const headerDetail = allSent
     ? `${items.length} ${word(items.length)} sent`
@@ -246,7 +236,7 @@ export function SendQueueSheet({
   // ---- primary button ------------------------------------------------------
   let cta: string;
   let ctaDisabled = false;
-  let ctaList = targets;
+  let ctaList = queued;
   if (allSent) {
     cta = 'Done';
   } else if (!online) {
@@ -255,18 +245,18 @@ export function SendQueueSheet({
   } else if (running) {
     cta = `Sending ${Math.min(progress.done + 1, progress.of)} of ${progress.of}…`;
     ctaDisabled = true;
-  } else if (failed.length && failed.length === pending.length) {
+  } else if (!queued.length) {
+    cta = 'Sending…';
+    ctaDisabled = true;
+  } else if (failed.length && failed.length === queued.length) {
     cta = `Retry ${failed.length} failed`;
     ctaList = failed;
-  } else if (!targets.length) {
-    cta = `Select ${noun[1]} to send`;
-    ctaDisabled = true;
-  } else if (many && targets.length < pending.length) {
-    cta = `Send ${targets.length} selected`;
+  } else if (queued.length === 1) {
+    cta = `Send ${noun[0]}`;
   } else {
-    cta = `Send ${targets.length} ${word(targets.length)}`;
+    cta = `Send all ${queued.length} ${noun[1]}`;
   }
-  const onCta = () => (allSent ? onClose() : run(ctaList));
+  const onCta = () => (allSent ? onClose() : sendAll(ctaList));
 
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
@@ -336,60 +326,28 @@ export function SendQueueSheet({
           </View>
         )}
 
-        {many && !allSent && !running && pending.length > 1 && (
-          <Pressable onPress={toggleAll} accessibilityRole="button" style={styles.selectAll} hitSlop={6}>
-            <Text style={[styles.selectAllText, { color: theme.tones.accent.fg }]}>
-              {allSelected ? 'Deselect all' : 'Select all'}
-            </Text>
-          </Pressable>
-        )}
-
         <ScrollView bounces={false} style={styles.list} contentContainerStyle={styles.listContent}>
           {items.map(item => {
             const st = stateOf(item.id);
-            const checkable = many && st.status !== 'sent' && !running;
-            const checked = selected.has(item.id);
+            // A row gets its own Send when there's a choice to make.
+            const canSendOne = many && online && !running && st.status === 'idle';
             return (
-              <Pressable
+              <View
                 key={item.id}
-                onPress={checkable ? () => toggle(item.id) : undefined}
-                disabled={!checkable}
-                accessibilityRole={checkable ? 'checkbox' : undefined}
-                accessibilityState={checkable ? { checked } : undefined}
                 accessibilityLabel={[item.title, item.subtitle, item.amount, st.status === 'idle' ? '' : st.status]
                   .filter(Boolean)
                   .join(', ')}
-                style={({ pressed }) => [
+                style={[
                   styles.row,
                   { borderColor: st.status === 'failed' ? theme.tones.danger.soft : theme.border },
                   st.status === 'failed' && { backgroundColor: theme.tones.danger.wash },
-                  pressed && checkable && { backgroundColor: theme.pressed },
                 ]}
               >
-                {many && (
-                  <View
-                    style={[
-                      styles.check,
-                      st.status === 'sent'
-                        ? { backgroundColor: theme.tones.success.solid, borderColor: theme.tones.success.solid }
-                        : checked
-                          ? { backgroundColor: theme.accent, borderColor: theme.accent }
-                          : { borderColor: theme.textFaint },
-                      !checkable && st.status !== 'sent' && styles.dim,
-                    ]}
-                  >
-                    {(checked || st.status === 'sent') &&
-                      icon('check', st.status === 'sent' ? '#fff' : theme.onAccent, 14)}
-                  </View>
-                )}
-                {/* With checkboxes the checkbox leads the row; the icon would crowd the title. */}
-                {!many && (
-                  <View style={[styles.tile, { backgroundColor: theme.tones.accent.soft }]}>
-                    {icon('ticket', theme.tones.accent.fg, 20)}
-                  </View>
-                )}
+                <View style={[styles.tile, { backgroundColor: theme.tones.accent.soft }]}>
+                  {icon('ticket', theme.tones.accent.fg, 20)}
+                </View>
                 <View style={styles.rowText}>
-                  <Text numberOfLines={1} style={[styles.rowTitle, { color: theme.text }]}>
+                  <Text numberOfLines={2} style={[styles.rowTitle, { color: theme.text }]}>
                     {item.title}
                   </Text>
                   {!!item.subtitle && (
@@ -401,6 +359,25 @@ export function SendQueueSheet({
                 <View style={styles.rowEnd}>
                   {!!item.amount && (
                     <Text style={[styles.amount, { color: theme.text }]}>{item.amount}</Text>
+                  )}
+                  {canSendOne && (
+                    <Pressable
+                      onPress={() => sendSingle(item)}
+                      hitSlop={6}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Send ${item.title}`}
+                      style={({ pressed }) => [
+                        styles.rowSend,
+                        {
+                          backgroundColor: theme.tones.accent.soft,
+                          borderColor: theme.tones.accent.solid,
+                          opacity: pressed ? 0.7 : 1,
+                        },
+                      ]}
+                    >
+                      {icon('send', theme.tones.accent.fg, 14)}
+                      <Text style={[styles.rowSendText, { color: theme.tones.accent.fg }]}>Send</Text>
+                    </Pressable>
                   )}
                   {st.status === 'sending' && (
                     <View style={styles.stateLine}>
@@ -416,7 +393,7 @@ export function SendQueueSheet({
                   )}
                   {st.status === 'failed' && !running && (
                     <Pressable
-                      onPress={() => run([item])}
+                      onPress={() => sendSingle(item)}
                       disabled={!online}
                       hitSlop={6}
                       accessibilityRole="button"
@@ -432,13 +409,13 @@ export function SendQueueSheet({
                 </View>
                 {st.status === 'failed' && !!st.error && (
                   <Text
-                    style={[styles.error, { color: theme.tones.danger.fg, paddingLeft: many ? 34 : 52 }]}
+                    style={[styles.error, { color: theme.tones.danger.fg, paddingLeft: 52 }]}
                     numberOfLines={2}
                   >
                     {st.error}
                   </Text>
                 )}
-              </Pressable>
+              </View>
             );
           })}
         </ScrollView>
@@ -515,9 +492,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   bannerText: { flex: 1, fontSize: 13, fontWeight: '600', lineHeight: 18 },
-  selectAll: { alignSelf: 'flex-end', marginRight: 20, marginBottom: 2 },
-  selectAllText: { fontSize: 13, fontWeight: '700' },
-
   list: { flexGrow: 0 },
   listContent: { paddingHorizontal: 16, paddingVertical: 6, gap: 8 },
   row: {
@@ -529,15 +503,16 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
   },
-  check: {
-    width: 22,
-    height: 22,
-    borderRadius: 7,
-    borderWidth: 2,
+  rowSend: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 5,
+    height: 30,
+    paddingHorizontal: 11,
+    borderRadius: 9,
+    borderWidth: 1,
   },
-  dim: { opacity: 0.4 },
+  rowSendText: { fontSize: 13, fontWeight: '700' },
   tile: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, minWidth: 0 },
   rowTitle: { fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
